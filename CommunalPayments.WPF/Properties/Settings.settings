@@ -1,0 +1,21 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="CommunalPayments.WPF.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="DefaultLanguage" Type="System.Globalization.CultureInfo" Scope="User">
+      <Value Profile="(Default)">en-US</Value>
+    </Setting>
+    <Setting Name="DefaultTheme" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ExpressionDark</Value>
+    </Setting>
+    <Setting Name="BankName" Type="System.String" Scope="User">
+      <Value Profile="(Default)">АТ МЕГАБАНК</Value>
+    </Setting>
+    <Setting Name="BankAccount" Type="System.String" Scope="User">
+      <Value Profile="(Default)">UA043516290000000000000290231</Value>
+    </Setting>
+    <Setting Name="EDRPOU" Type="System.String" Scope="User">
+      <Value Profile="(Default)">09804119</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

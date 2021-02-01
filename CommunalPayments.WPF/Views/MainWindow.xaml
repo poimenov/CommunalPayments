@@ -1,0 +1,147 @@
+﻿<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CommunalPayments.WPF.Views"
+        xmlns:dict="clr-namespace:CommunalPayments.WPF.Views.Dictionary"
+        xmlns:localVMs="clr-namespace:CommunalPayments.WPF.ViewModels"
+        xmlns:dictVMs="clr-namespace:CommunalPayments.WPF.ViewModels.Dictionary"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:md="https://github.com/fantasticfiasco/mvvm-dialogs"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        x:Class="CommunalPayments.WPF.Views.MainWindow"
+        xmlns:ad="https://github.com/Dirkster99/AvalonDock"        
+        Background="{DynamicResource WindowBackgroundBrush}"    
+        md:DialogServiceViews.IsRegistered="True"
+        mc:Ignorable="d"
+        DataContext="{Binding Source={StaticResource Locator}, Path=Main}"
+        Title="{DynamicResource m_Title}" Height="600" Width="1000"
+        WindowState="Normal">
+    <Window.InputBindings>
+        <KeyBinding Command="{Binding ExitCmd}" Gesture="Alt+F4" />
+    </Window.InputBindings>
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" Margin="0,0,0.4,0">
+            <MenuItem Header="{DynamicResource m_menu_Payments}">
+                <MenuItem Header="{DynamicResource m_menu_Payments_NewPayment}" Command="{Binding CreatePaymentCmd}"/>
+                <MenuItem Header="{DynamicResource m_menu_Payments_Payments}" Command="{Binding ShowPaymentsCmd}"/>
+                <Separator />
+                <MenuItem Header="{DynamicResource m_menu_Payments_Exit}" Command="{Binding ExitCmd}" InputGestureText="Alt+F4"/>
+            </MenuItem>
+            <MenuItem Header="{DynamicResource m_menu_Dictionary}">
+                <MenuItem Header="{DynamicResource m_menu_Dictionary_Accounts}" Command="{Binding ShowAccountsCmd}"/>
+                <MenuItem Header="{DynamicResource m_menu_Dictionary_Persons}" Command="{Binding ShowPersonsCmd}"/>
+                <MenuItem Header="{DynamicResource m_menu_Dictionary_Rates}" Command="{Binding ShowRatesCmd}"/>
+                <MenuItem Header="{DynamicResource m_menu_Dictionary_Services}" Command="{Binding ShowServicesCmd}"/>
+            </MenuItem>
+            <MenuItem Header="{DynamicResource ch_Title}">
+                <MenuItem Header="{DynamicResource m_menu_LineChart}" Command="{Binding ShowLineChartCmd}"/>
+                <MenuItem Header="{DynamicResource m_menu_CircleChart}" Command="{Binding ShowCircleChartCmd}"/>
+            </MenuItem>
+            <MenuItem Header="{DynamicResource m_menu_Options}">
+                <MenuItem Header="{DynamicResource m_menu_Options_Language}" DataContext="{Binding MenuLanguageViewModel}" ItemsSource="{Binding Items}" />
+                <MenuItem Header="{DynamicResource m_menu_Options_Theme}" DataContext="{Binding MenuThemeViewModel}" ItemsSource="{Binding Items}"/>
+            </MenuItem>
+            <MenuItem Header="{DynamicResource m_menu_About}" Command="{Binding ShowAboutDialogCmd}"/>
+        </Menu>
+        <ad:DockingManager x:Name="dManager" DockPanel.Dock="Bottom" Margin="2,2,2,2"
+                           DataContext="{Binding DockManagerViewModel}"
+                           DocumentsSource="{Binding Documents}"
+                           ActiveContent="{Binding SelectedDocument}"                          
+                           UseLayoutRounding="True">
+            <ad:DockingManager.Resources>
+                <DataTemplate DataType="{x:Type localVMs:PaymentsViewModel}">
+                    <local:Payments />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type localVMs:PaymentDetailViewModel}">
+                    <local:PaymentDetail />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type dictVMs:ServicesViewModel}">
+                    <dict:Services />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type dictVMs:RatesViewModel}">
+                    <dict:Rates />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type dictVMs:PersonsViewModel}">
+                    <dict:Persons />
+                </DataTemplate>
+                <DataTemplate DataType="{x:Type dictVMs:AccountsViewModel}">
+                    <dict:Accounts />
+                </DataTemplate>
+            </ad:DockingManager.Resources>
+            <ad:DockingManager.LayoutItemContainerStyle>
+                <Style TargetType="{x:Type ad:LayoutItem}">
+                    <Setter Property="Title" Value="{Binding Model.Title}" />
+                    <Setter Property="CloseCommand" Value="{Binding Model.CloseCommand}" />
+                    <Setter Property="CanClose" Value="{Binding Model.CanClose}" />
+                    <Setter Property="IsActive" Value="{Binding Model.IsActive, Mode=TwoWay}"/>
+                    <Setter Property="IsSelected" Value="{Binding Model.IsSelected, Mode=TwoWay}"/>
+                    <Setter Property="ContentId" Value="{Binding Model.ContentId, Mode=TwoWay}"/>
+                </Style>
+            </ad:DockingManager.LayoutItemContainerStyle>
+            <ad:LayoutRoot>
+                <ad:LayoutPanel Orientation="Horizontal">
+                    <ad:LayoutDocumentPane>
+                    </ad:LayoutDocumentPane>
+                    <ad:LayoutAnchorablePane DockWidth="300">
+                        <ad:LayoutAnchorable x:Name="pgLayout" ContentId="properties"
+                                            Title="{DynamicResource m_Properties}" CanAutoHide="True"
+                                            CanHide="False" CanFloat="False" CanMove="False"
+                                            AutoHideWidth="300" CanDockAsTabbedDocument="False"
+                                            CanClose="False">
+                            <xctk:PropertyGrid x:Name="pgProperties"
+                                               SelectedObject="{Binding SelectedItem}" IsEnabled="{Binding SelectedItem.Enabled}"
+                                               SelectedObjectTypeName="{Binding SelectedDocument.ItemTypeName}">
+                                <b:Interaction.Triggers>
+                                    <b:EventTrigger EventName="PropertyValueChanged" SourceObject="{Binding ElementName=pgProperties}">
+                                        <b:InvokeCommandAction Command="{Binding PropertyChangedCmd}" PassEventArgsToCommand="True"/>
+                                    </b:EventTrigger>
+                                    <b:EventTrigger EventName="PropertyChanged" SourceObject="{Binding DockManagerViewModel}">
+                                        <b:CallMethodAction MethodName="Update" TargetObject="{Binding ElementName=pgProperties}"/>
+                                    </b:EventTrigger>
+                                </b:Interaction.Triggers>
+                                <xctk:PropertyGrid.EditorDefinitions>
+                                    <xctk:EditorTemplateDefinition TargetProperties="ServiceId">
+                                        <xctk:EditorTemplateDefinition.EditingTemplate>
+                                            <DataTemplate>
+                                                <xctk:PropertyGridEditorComboBox DisplayMemberPath="Name" SelectedValuePath="Id" 
+                                                    SelectedItem="{Binding Instance.Service}" SelectedValue="{Binding Instance.ServiceId}"
+                                                    ItemsSource="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}, Path=DataContext.Services}">
+                                                </xctk:PropertyGridEditorComboBox>
+                                            </DataTemplate>
+                                        </xctk:EditorTemplateDefinition.EditingTemplate>
+                                    </xctk:EditorTemplateDefinition>
+                                    <xctk:EditorTemplateDefinition TargetProperties="PersonId">
+                                        <xctk:EditorTemplateDefinition.EditingTemplate>
+                                            <DataTemplate>
+                                                <xctk:PropertyGridEditorComboBox DisplayMemberPath="Name" SelectedValuePath="Id" 
+                                                    SelectedItem="{Binding Instance.Person}" SelectedValue="{Binding Instance.PersonId}"
+                                                    ItemsSource="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}, Path=DataContext.Persons}">
+                                                </xctk:PropertyGridEditorComboBox>
+                                            </DataTemplate>
+                                        </xctk:EditorTemplateDefinition.EditingTemplate>
+                                    </xctk:EditorTemplateDefinition>
+                                    <xctk:EditorTemplateDefinition TargetProperties="PeriodFrom">
+                                        <xctk:EditorTemplateDefinition.EditingTemplate>
+                                            <DataTemplate>
+                                                <xctk:PropertyGridEditorDateTimeUpDown Value="{Binding Value}" Format="YearMonth"/>
+                                            </DataTemplate>
+                                        </xctk:EditorTemplateDefinition.EditingTemplate>
+                                    </xctk:EditorTemplateDefinition>
+                                    <xctk:EditorTemplateDefinition TargetProperties="PeriodTo">
+                                        <xctk:EditorTemplateDefinition.EditingTemplate>
+                                            <DataTemplate>
+                                                <xctk:PropertyGridEditorDateTimeUpDown Value="{Binding Value}" Format="YearMonth"/>
+                                            </DataTemplate>
+                                        </xctk:EditorTemplateDefinition.EditingTemplate>
+                                    </xctk:EditorTemplateDefinition>
+                                </xctk:PropertyGrid.EditorDefinitions>
+                            </xctk:PropertyGrid>
+                        </ad:LayoutAnchorable>
+                    </ad:LayoutAnchorablePane>
+                </ad:LayoutPanel>
+            </ad:LayoutRoot>
+        </ad:DockingManager>
+    </DockPanel>
+</Window>

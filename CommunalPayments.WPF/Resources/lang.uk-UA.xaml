@@ -1,0 +1,58 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:v="clr-namespace:System;assembly=mscorlib"
+                    xmlns:local="clr-namespace:CommunalPayments.WPF.Resources">
+    <!--common buttons-->
+    <v:String x:Key="button_Ok">Ok</v:String>
+    <v:String x:Key="button_Edit">Змінити</v:String>
+    <v:String x:Key="button_Cancel">Скасування</v:String>
+    <v:String x:Key="button_Save">Зберегти</v:String>
+    <v:String x:Key="button_Create">Створити</v:String>
+    <v:String x:Key="button_Delete">Вилучити</v:String>
+    <v:String x:Key="button_Import">Iмпорт</v:String>
+    <!-- Main window -->
+    <v:String x:Key="m_Title">Комунальні платежі</v:String>
+    <v:String x:Key="m_menu_Payments">Квитанції</v:String>
+    <v:String x:Key="m_menu_Payments_NewPayment">Нова квитанція</v:String>
+    <v:String x:Key="m_menu_Payments_Payments">Квитанції</v:String>
+    <v:String x:Key="m_menu_Payments_Exit">Вихід</v:String>
+    <v:String x:Key="m_menu_Dictionary">Словники</v:String>
+    <v:String x:Key="m_menu_Dictionary_Accounts">Квартири</v:String>
+    <v:String x:Key="m_menu_Dictionary_Persons">Власники</v:String>
+    <v:String x:Key="m_menu_Dictionary_Rates">Тарифи</v:String>
+    <v:String x:Key="m_menu_Dictionary_Services">Служби</v:String>
+    <v:String x:Key="m_menu_Options">Налаштування</v:String>
+    <v:String x:Key="m_menu_Options_Language">Мова</v:String>
+    <v:String x:Key="m_menu_Options_Theme">Тема</v:String>
+    <v:String x:Key="m_menu_About">Про програму</v:String>
+    <v:String x:Key="m_Properties">Властивості</v:String>
+    <v:String x:Key="m_menu_LineChart">Лінійний</v:String>
+    <v:String x:Key="m_menu_CircleChart">Круговий</v:String>
+    <!--PaymentDetail window-->
+    <v:String x:Key="pd_Person">Власник:</v:String>
+    <v:String x:Key="pd_Account">Вибрати квартиру:</v:String>
+    <v:String x:Key="pd_Comment">Коментар:</v:String>
+    <v:String x:Key="pd_Enabled">: Доступний</v:String>
+    <v:String x:Key="pd_Sum">Сума: {0}</v:String>
+    <v:String x:Key="pd_button_ViewDebts">Нарахування</v:String>
+    <!--Payments window-->
+    <v:String x:Key="p_Person">Власник: {0}</v:String>
+    <!--Debts window-->
+    <v:String x:Key="d_Title">Перегляд заборгованості</v:String>
+    <v:String x:Key="d_PayBySaldo">Оплатити сальдо</v:String>
+    <v:String x:Key="d_PayByCredit">Оплатити нарахування</v:String>
+    <v:String x:Key="d_AccountNumber">Особистий рахунок:</v:String>
+    <v:String x:Key="d_Address">Адреса:</v:String>
+    <!--Login window-->
+    <v:String x:Key="l_Title">Вхід</v:String>
+    <v:String x:Key="l_Login">Логін:</v:String>
+    <v:String x:Key="l_Password">Пароль:</v:String>
+    <!--About window-->
+    <v:String x:Key="a_Title">Про програму CommunalPayments</v:String>
+    <!--Progress window-->
+    <v:String x:Key="pr_Title">Імпорт</v:String>
+    <!--Charts window-->
+    <v:String x:Key="ch_Title">Графік</v:String>
+    <v:String x:Key="ch_Yaxis_Title">Оплата</v:String>
+    <v:String x:Key="ch_Xaxis_Title">Дата</v:String>
+</ResourceDictionary>
