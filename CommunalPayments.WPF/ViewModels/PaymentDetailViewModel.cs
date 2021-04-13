@@ -92,6 +92,11 @@ namespace CommunalPayments.WPF.ViewModels
             {
                 item.Amount = calculationAmount(item.Value.Value, item.ServiceId);
             }
+            SelectedItem = item;
+        }
+        public void RefreshSelectedPayment()
+        {
+            var item = SelectedItem;
             SelectedPayment = SelectedPayment;
             SelectedItem = item;
         }

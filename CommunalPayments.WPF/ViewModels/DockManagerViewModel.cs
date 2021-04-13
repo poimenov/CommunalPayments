@@ -121,7 +121,7 @@ namespace CommunalPayments.WPF.ViewModels
                 var item = SelectedItem as PaymentItem;
                 var prop = args.OriginalSource as PropertyItem;
                 if (null != item && null != prop && (prop.PropertyName == nameof(item.LastIndication) || prop.PropertyName == nameof(item.CurrentIndication) || prop.PropertyName == nameof(item.Value) || prop.PropertyName == nameof(item.Amount)))
-                {                    
+                {
                     if (Convert.ToDecimal(args.OldValue) != Convert.ToDecimal(args.NewValue))
                     {
                         ((PaymentDetailViewModel)SelectedDocument).ChangedItem(item);
@@ -129,6 +129,25 @@ namespace CommunalPayments.WPF.ViewModels
                 }
             }
         }
+        public RelayCommand<object> SelectedItemChangedCmd { get { return new RelayCommand<object>(OnSelectedItemChanged, obj => (obj != null) || (SelectedDocument is PaymentDetailViewModel), false); } }
+        private void OnSelectedItemChanged(object obj)
+        {
+            var args = obj as System.Windows.RoutedPropertyChangedEventArgs<Xceed.Wpf.Toolkit.PropertyGrid.PropertyItemBase>;
+            if (null != args && null != args.OldValue)
+            {
+                ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment();
+            }
+        }
+        public RelayCommand<object> KeyDownCmd { get { return new RelayCommand<object>(OnKeyDownCmd, obj => (obj != null) || (SelectedDocument is PaymentDetailViewModel), false); } }
+        private void OnKeyDownCmd(object obj)
+        {
+            var args = obj as System.Windows.Input.KeyEventArgs;
+            if (null != args && args.Key == System.Windows.Input.Key.Enter)
+            {
+                ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment();
+            }
+        }
+
     }
 
 

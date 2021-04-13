@@ -97,8 +97,13 @@
                                     <b:EventTrigger EventName="PropertyValueChanged" SourceObject="{Binding ElementName=pgProperties}">
                                         <b:InvokeCommandAction Command="{Binding PropertyChangedCmd}" PassEventArgsToCommand="True"/>
                                     </b:EventTrigger>
-                                    <b:EventTrigger EventName="PropertyChanged" SourceObject="{Binding DockManagerViewModel}">
+                                    <b:EventTrigger EventName="SelectedPropertyItemChanged" SourceObject="{Binding ElementName=pgProperties}">
                                         <b:CallMethodAction MethodName="Update" TargetObject="{Binding ElementName=pgProperties}"/>
+                                        <b:InvokeCommandAction Command="{Binding SelectedItemChangedCmd}"  PassEventArgsToCommand="True"/>
+                                    </b:EventTrigger>
+                                    <b:EventTrigger EventName="KeyDown" SourceObject="{Binding ElementName=pgProperties}">
+                                        <b:CallMethodAction MethodName="Update" TargetObject="{Binding ElementName=pgProperties}"/>
+                                        <b:InvokeCommandAction Command="{Binding KeyDownCmd}"  PassEventArgsToCommand="True"/>
                                     </b:EventTrigger>
                                 </b:Interaction.Triggers>
                                 <xctk:PropertyGrid.EditorDefinitions>
