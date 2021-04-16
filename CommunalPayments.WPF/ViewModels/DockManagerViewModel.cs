@@ -120,7 +120,7 @@ namespace CommunalPayments.WPF.ViewModels
             {
                 var item = SelectedItem as PaymentItem;
                 var prop = args.OriginalSource as PropertyItem;
-                if (null != item && null != prop && (prop.PropertyName == nameof(item.LastIndication) || prop.PropertyName == nameof(item.CurrentIndication) || prop.PropertyName == nameof(item.Value) || prop.PropertyName == nameof(item.Amount)))
+                if (null != item && null != prop && (prop.PropertyName == nameof(item.LastIndication) || prop.PropertyName == nameof(item.CurrentIndication) || prop.PropertyName == nameof(item.Value)))
                 {
                     if (Convert.ToDecimal(args.OldValue) != Convert.ToDecimal(args.NewValue))
                     {
@@ -132,10 +132,27 @@ namespace CommunalPayments.WPF.ViewModels
         public RelayCommand<object> SelectedItemChangedCmd { get { return new RelayCommand<object>(OnSelectedItemChanged, obj => (obj != null) || (SelectedDocument is PaymentDetailViewModel), false); } }
         private void OnSelectedItemChanged(object obj)
         {
-            var args = obj as System.Windows.RoutedPropertyChangedEventArgs<Xceed.Wpf.Toolkit.PropertyGrid.PropertyItemBase>;
-            if (SelectedDocument is PaymentDetailViewModel &&  null != args && null != args.OldValue)
+            var args = obj as RoutedPropertyChangedEventArgs<PropertyItemBase>;
+            var ent = SelectedItem as Entity;
+            if (null == args || null == ent)
             {
-                ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment();
+                return;
+            }
+            if (SelectedDocument is PaymentDetailViewModel &&  null != args && null != args.OldValue && args.OldValue is Xceed.Wpf.Toolkit.PropertyGrid.PropertyItem)
+            {
+                var item = SelectedItem as PaymentItem;
+                var oldValue = args.OldValue as Xceed.Wpf.Toolkit.PropertyGrid.PropertyItem;
+                if (null != item && (item.ServiceId == 1 || item.ServiceId == 4 || item.ServiceId == 5))
+                {
+                    if (oldValue.PropertyName == "CurrentIndication" || oldValue.PropertyName == "LastIndication")
+                    {
+                        ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment();
+                    }
+                    else
+                    {
+                        ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment(item);
+                    }
+                }
             }
         }
         public RelayCommand<object> KeyDownCmd { get { return new RelayCommand<object>(OnKeyDownCmd, obj => (obj != null) || (SelectedDocument is PaymentDetailViewModel), false); } }

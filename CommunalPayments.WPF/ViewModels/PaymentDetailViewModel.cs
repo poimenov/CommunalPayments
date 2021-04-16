@@ -94,9 +94,9 @@ namespace CommunalPayments.WPF.ViewModels
             }
             SelectedItem = item;
         }
-        public void RefreshSelectedPayment()
+        public void RefreshSelectedPayment(PaymentItem paymentItem = null)
         {
-            var item = SelectedItem;
+            var item = (null == paymentItem)? SelectedItem : paymentItem;
             SelectedPayment = SelectedPayment;
             SelectedItem = item;
         }
