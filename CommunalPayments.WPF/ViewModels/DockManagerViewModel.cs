@@ -133,7 +133,7 @@ namespace CommunalPayments.WPF.ViewModels
         private void OnSelectedItemChanged(object obj)
         {
             var args = obj as System.Windows.RoutedPropertyChangedEventArgs<Xceed.Wpf.Toolkit.PropertyGrid.PropertyItemBase>;
-            if (null != args && null != args.OldValue)
+            if (SelectedDocument is PaymentDetailViewModel &&  null != args && null != args.OldValue)
             {
                 ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment();
             }
@@ -142,7 +142,7 @@ namespace CommunalPayments.WPF.ViewModels
         private void OnKeyDownCmd(object obj)
         {
             var args = obj as System.Windows.Input.KeyEventArgs;
-            if (null != args && args.Key == System.Windows.Input.Key.Enter)
+            if (SelectedDocument is PaymentDetailViewModel && null != args && args.Key == System.Windows.Input.Key.Enter)
             {
                 ((PaymentDetailViewModel)SelectedDocument).RefreshSelectedPayment();
             }
