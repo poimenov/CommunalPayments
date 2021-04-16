@@ -16,7 +16,7 @@
         md:DialogServiceViews.IsRegistered="True"
         mc:Ignorable="d"
         DataContext="{Binding Source={StaticResource Locator}, Path=Main}"
-        Title="{DynamicResource m_Title}" Height="600" Width="1000"
+        Title="{DynamicResource m_Title}" Height="600" Width="1150"
         WindowState="Normal">
     <Window.InputBindings>
         <KeyBinding Command="{Binding ExitCmd}" Gesture="Alt+F4" />

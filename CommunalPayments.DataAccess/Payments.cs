@@ -51,6 +51,7 @@ namespace CommunalPayments.DataAccess
                         item.PeriodTo = paymentItem.PeriodTo;
                         item.ServiceId = paymentItem.ServiceId;
                         item.Value = paymentItem.Value;
+                        item.Enabled = payment.Enabled;
                         entity.PaymentItems.Add(item);
                     }
                     db.Payments.Add(entity);
