@@ -3,6 +3,8 @@ using CommunalPayments.Common.Interfaces;
 using CommunalPayments.Common.Reports;
 using GalaSoft.MvvmLight.CommandWpf;
 using log4net;
+using MvvmDialogs;
+using MvvmDialogs.FrameworkDialogs.MessageBox;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,8 +15,8 @@ namespace CommunalPayments.WPF.ViewModels
 {
     public class PaymentsViewModel : DockWindowViewModel
     {
-        private IPayment _dataAccess;
-        private List<int> _deletedIds;
+        private readonly IPayment _dataAccess;
+        private readonly IDialogService _dialogService;
         protected override Type GetGridItemType
         {
             get
@@ -61,17 +63,17 @@ namespace CommunalPayments.WPF.ViewModels
         #endregion
         public ObservableCollection<Payment> Payments { get; private set; }
         public ObservableCollection<Account> Accounts { get; private set; }
-        public PaymentsViewModel(IPayment dataAccess, IDataAccess<Account> accounts, ILog logger) : base(logger)
+        public PaymentsViewModel(IDialogService dialogService, IPayment dataAccess, IDataAccess<Account> accounts, ILog logger) : base(logger)
         {
             _dataAccess = dataAccess;
+            _dialogService = dialogService;
             _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
             _columns.Add(new KeyValuePair<string, string>("Name", "Name"));
             _columns.Add(new KeyValuePair<string, string>("Sum", "Sum"));
             _columns.Add(new KeyValuePair<string, string>("Comment", "Comment"));
             Accounts = new ObservableCollection<Account>(accounts.ItemsList);
-            _deletedIds = new List<int>();
         }
-        #region SaveCmd
+        #region EditCmd
         public RelayCommand<object> EditCmd { get { return new RelayCommand<object>(OnEdit, obj => (obj != null && SelectedAccount != null && Accounts.Count > 0), false); } }
         private void OnEdit(object obj)
         {
@@ -100,9 +102,21 @@ namespace CommunalPayments.WPF.ViewModels
         private void OnDelete(object obj)
         {
             Payment item = obj as Payment;
-            if (item != null && item.Id > 0)
+            var _deletedIds = new List<int>();
+            _deletedIds.Add(item.Id);
+            if (item != null && item.Id > 0 && item.Enabled)
             {
-                _deletedIds.Add(item.Id);
+                MessageBoxSettings settings = new MessageBoxSettings();
+                settings.Caption = App.ResGlobal.GetString("DeletePaymentCaption");
+                settings.MessageBoxText = App.ResGlobal.GetString("DeletePaymentMessage");
+                settings.Button = System.Windows.MessageBoxButton.YesNo;
+                settings.Icon = System.Windows.MessageBoxImage.Question;                
+                if(System.Windows.MessageBoxResult.Yes == _dialogService.ShowMessageBox(this, settings))
+                {
+                    _dataAccess.Delete(_deletedIds);
+                    Payments = new ObservableCollection<Payment>(_dataAccess.GetPayments(null, SelectedAccount.Id));
+                    RaisePropertyChanged(() => Payments);
+                }
             }
         }
         #endregion

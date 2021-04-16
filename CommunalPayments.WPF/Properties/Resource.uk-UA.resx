@@ -126,6 +126,12 @@
   <data name="Accounts" xml:space="preserve">
     <value>Квартири</value>
   </data>
+  <data name="DeletePaymentCaption" xml:space="preserve">
+    <value>Підтвердження видалення</value>
+  </data>
+  <data name="DeletePaymentMessage" xml:space="preserve">
+    <value>Ви впевнені, що цю квитанцію слід видалити?</value>
+  </data>
   <data name="English (en-US)" xml:space="preserve">
     <value>Англійська</value>
   </data>
