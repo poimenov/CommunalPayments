@@ -16,7 +16,7 @@ namespace CommunalPayments.DataAccess
             {
                 using (var db = new DataModel())
                 {
-                    if(db.Payments.Count()==0)
+                    if (db.Payments.Count() == 0)
                     {
                         return new List<Payment>();
                     }
@@ -33,30 +33,20 @@ namespace CommunalPayments.DataAccess
             {
                 foreach (var payment in payments)
                 {
-                    var entity = new Payment();
-                    entity.AccountId = payment.AccountId;
-                    entity.Comment = payment.Comment;
-                    entity.Enabled = payment.Enabled;
-                    entity.PaymentDate = payment.PaymentDate;
-                    entity.PaymentDate = DateTime.Now;
-                    entity.ErcId = payment.ErcId;
-                    entity.BillId = payment.BillId;
-                    foreach (var paymentItem in payment.PaymentItems)
-                    {
-                        var item = new PaymentItem();
-                        item.Amount = paymentItem.Amount;
-                        item.CurrentIndication = paymentItem.CurrentIndication;
-                        item.LastIndication = paymentItem.LastIndication;
-                        item.PeriodFrom = paymentItem.PeriodFrom;
-                        item.PeriodTo = paymentItem.PeriodTo;
-                        item.ServiceId = paymentItem.ServiceId;
-                        item.Value = paymentItem.Value;
-                        item.Enabled = payment.Enabled;
-                        entity.PaymentItems.Add(item);
-                    }
-                    db.Payments.Add(entity);
+                    db.Payments.Add(Clone(payment));
                 }
                 db.SaveChanges();
+            }
+        }
+
+        public int Create(Payment payment)
+        {
+            using (var db = new DataModel())
+            {
+                var entity = Clone(payment);
+                db.Payments.Add(entity);
+                db.SaveChanges();
+                return entity.Id;
             }
         }
 
@@ -79,7 +69,7 @@ namespace CommunalPayments.DataAccess
         {
             using (var db = new DataModel())
             {
-                return db.Payments.Include(x=>x.Account)
+                return db.Payments.Include(x => x.Account)
                     .Include(x => x.Account.Person)
                     .Include(x => x.PaymentItems).ThenInclude(x => x.Service).First(x => x.Id == paymentId);
             }
@@ -89,7 +79,7 @@ namespace CommunalPayments.DataAccess
         {
             using (var db = new DataModel())
             {
-                var query = db.Payments.Select(x=>x);
+                var query = db.Payments.Select(x => x);
                 if (accountId.HasValue)
                 {
                     query = query.Where(x => x.AccountId == accountId.Value);
@@ -165,7 +155,7 @@ namespace CommunalPayments.DataAccess
                     //update other payment items
                     foreach (var id in ids)
                     {
-                        var item = entity.PaymentItems.First(x => x.Id == id);
+                        var item = db.PaymentItems.First(x => x.Id == id);
                         var upd = payment.PaymentItems.First(x => x.Id == id);
                         item.Amount = upd.Amount;
                         item.CurrentIndication = upd.CurrentIndication;
@@ -179,6 +169,35 @@ namespace CommunalPayments.DataAccess
                 }
                 db.SaveChanges();
             }
+        }
+
+        private Payment Clone(Payment payment)
+        {
+            var retVal = new Payment();
+            retVal.AccountId = payment.AccountId;
+            retVal.Comment = payment.Comment;
+            retVal.Enabled = payment.Enabled;
+            retVal.PaymentDate = payment.PaymentDate;
+            retVal.PaymentDate = DateTime.Now;
+            retVal.ErcId = payment.ErcId;
+            retVal.BillId = payment.BillId;
+            retVal.Commission = payment.Commission;
+            retVal.Bbl = payment.Bbl;
+            foreach (var paymentItem in payment.PaymentItems)
+            {
+                var item = new PaymentItem();
+                item.Amount = paymentItem.Amount;
+                item.CurrentIndication = paymentItem.CurrentIndication;
+                item.LastIndication = paymentItem.LastIndication;
+                item.PeriodFrom = paymentItem.PeriodFrom;
+                item.PeriodTo = paymentItem.PeriodTo;
+                item.ServiceId = paymentItem.ServiceId;
+                item.Value = paymentItem.Value;
+                item.Enabled = payment.Enabled;
+                item.Options = paymentItem.Options;
+                retVal.PaymentItems.Add(item);
+            }
+            return retVal;
         }
     }
 }

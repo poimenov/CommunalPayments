@@ -124,6 +124,15 @@ namespace CommunalPayments.Common.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Комиссия.
+        /// </summary>
+        public static string Commission {
+            get {
+                return ResourceManager.GetString("Commission", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Дата создания.
         /// </summary>
         public static string CreateDate {

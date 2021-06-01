@@ -138,6 +138,9 @@
   <data name="Comment" xml:space="preserve">
     <value>Коментар</value>
   </data>
+  <data name="Commission" xml:space="preserve">
+    <value>Комісія</value>
+  </data>
   <data name="CreateDate" xml:space="preserve">
     <value>Дата Створення</value>
   </data>

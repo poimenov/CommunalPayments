@@ -3,14 +3,16 @@ using System;
 using CommunalPayments.DataAccess.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CommunalPayments.DataAccess.Migrations
 {
     [DbContext(typeof(DataModel))]
-    partial class DataModelModelSnapshot : ModelSnapshot
+    [Migration("20210525165341_AddBblAndOptions")]
+    partial class AddBblAndOptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -142,9 +144,6 @@ namespace CommunalPayments.DataAccess.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Comment")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("Commission")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Enabled")

@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace CommunalPayments.Erc.Repository
@@ -26,7 +27,17 @@ namespace CommunalPayments.Erc.Repository
         private const string accountsUrl = "/ru/service/publicutilities";
         private const string billsUrl = "/ru/cabinet/resp/billlist/5?order=asc";
         private const string orderUrl = "/ru/service/resp/pays/orderedit/";
+        private const string paysOrderUrl = "/ru/service/resp/pays/order";
+        //{0} - квартира
+        //{2} - ГодМесяц
         private const string debtUrl = "/ru/service/resp/debt/{0}/{1}?order=asc";
+        //{0} - квартира
+        //{1} - оплата по графе начислено(0)/долг(1)/остаток долга(2)
+        //{2} - ГодМесяц
+        //пример:
+        //https://erc.megabank.ua/ru/service/publicutilities/paysdebt/2/2/202104
+        private const string createUrl = "/ru/service/publicutilities/paysdebt/{0}/{1}/{2}";
+        private const string deleteUrl = "/ru/cabinet/resp/orderdelete";
         public string Login { set; private get; }
         public string Password { set; private get; }
         public event EventHandler<ProgressChangedEventArgs> ImportProgressChanged;
@@ -130,6 +141,158 @@ namespace CommunalPayments.Erc.Repository
             {
                 _logger.Error(ex.Message, ex);
                 throw ex;
+            }
+            return retVal;
+        }
+        public async Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date)
+        {
+            var retVal = new Payment();
+            retVal.Account = account;
+            retVal.AccountId = account.Id;
+            retVal.Enabled = true;
+            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
+            {
+                return null;
+            }
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    if (!await Login2Site(client))
+                    {
+                        return null;
+                    }
+                    using (HttpResponseMessage response = await client.GetAsync(string.Format(createUrl, account.InternalId, (int)payBy, date.AddMonths(-1).ToString("yyyyMM"))))
+                    {
+                        if (response.StatusCode == HttpStatusCode.OK)
+                        {
+                            var url = response.RequestMessage.RequestUri.ToString();
+                            if(!url.Contains("/ru/service/publicutilities/orderedit"))
+                            {
+                                return null;
+                            }
+                            retVal.ErcId = Convert.ToInt64(url.Split('/').Last());
+                            var page = await response.Content.ReadAsStringAsync();
+                            var doc = new HtmlDocument();
+                            doc.LoadHtml(page);
+                            var json = doc.DocumentNode.SelectSingleNode("//script[text()[contains(.,'\"bbl\":')]]").InnerText.Replace("jQuery.extend(Drupal.settings, ", "").Replace(");", "");
+                            using (var reader = new JsonTextReader(new StringReader(json)))
+                            {
+                                while (reader.Read())
+                                {
+                                    if (reader.Value != null && Convert.ToString(reader.Value) == "bbl")
+                                    {
+                                        reader.Read();
+                                        retVal.Bbl = Convert.ToString(reader.Value);
+                                        break;
+                                    }
+                                }
+                            }
+                            retVal.PaymentItems.AddRange(await GetPaymentItems(client, retVal.ErcId));
+                            retVal.PaymentItems.ForEach(item => item.Enabled = true);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message, ex);
+                throw ex;
+            }
+            return retVal;
+        }
+        public async Task<bool> UpdatePayment(Payment payment)
+        {
+            bool retVal = false;
+            if (payment.ErcId > 0 && !String.IsNullOrEmpty(payment.Bbl) && null != payment.Account && payment.Account.Number > 0)
+            {
+                try
+                {
+                    using (HttpClient client = new HttpClient())
+                    {
+                        if (!await Login2Site(client))
+                        {
+                            return retVal;
+                        }
+                        foreach(var item in payment.PaymentItems.Where(p=>string.IsNullOrEmpty(p.Options)))
+                        {
+                            item.Options = GetTime();
+                        }
+                        var orderItems = new List<OrderItem>();
+                        foreach (var item in payment.PaymentItems)
+                        {
+                            orderItems.Add(new OrderItem()
+                            {
+                                Service = item.ServiceId,
+                                Amount = item.Amount,
+                                CurCounter = item.CurrentIndication,
+                                PrevCounter = item.LastIndication,
+                                Diff = item.Value,
+                                Month1 = item.PeriodFrom.AddMonths(-1).ToString("yyyyMM"),
+                                Month2 = item.PeriodTo.AddMonths(-1).ToString("yyyyMM"),
+                                Options = item.Options
+                            });
+                        }
+                        
+                        var postData = new List<KeyValuePair<string, string>>();
+                        postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(orderItems)));
+                        postData.Add(new KeyValuePair<string, string>("cdf", payment.Account.Number.ToString()));
+                        postData.Add(new KeyValuePair<string, string>("idf", "0"));
+                        postData.Add(new KeyValuePair<string, string>("ido", payment.ErcId.ToString()));
+                        postData.Add(new KeyValuePair<string, string>("bbl", payment.Bbl));
+                        
+                        using (var content = new FormUrlEncodedContent(postData))
+                        {
+                            using (var response = await client.PostAsync(paysOrderUrl, content))
+                            {
+                                if (response.StatusCode == HttpStatusCode.OK)
+                                {
+                                    return true; 
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex.Message, ex);
+                    throw ex;
+                }
+            }
+            return retVal;
+        }
+        public async Task<bool> DeletePayment(Payment payment)
+        {
+            bool retVal = false;
+            if (payment.ErcId > 0 && !String.IsNullOrEmpty(payment.Bbl))
+            {
+                try
+                {
+                    using (HttpClient client = new HttpClient())
+                    {
+                        if (!await Login2Site(client))
+                        {
+                            return retVal;
+                        }
+                        var postData = new List<KeyValuePair<string, string>>();
+                        postData.Add(new KeyValuePair<string, string>("sorder", payment.ErcId.ToString()));
+                        using (var content = new FormUrlEncodedContent(postData))
+                        {
+                            using (var response = await client.PostAsync(deleteUrl, content))
+                            {
+                                if (response.StatusCode == HttpStatusCode.OK)
+                                {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex.Message, ex);
+                    throw ex;
+                }
             }
             return retVal;
         }
@@ -242,7 +405,9 @@ namespace CommunalPayments.Erc.Repository
                     Enabled = false,
                     ErcId = bill.IdBill,
                     ModeId = bill.IdPayMode,
+                    Mode = new PayMode() { Id = bill.IdPayMode, Name = bill.PayModeName },
                     StatusId = bill.Status,
+                    Status = new PayStatus() { Id = bill.Status, Name = bill.StatusName },
                     CreateDate = DateTime.Now
                 };
                 DateTime dt;
@@ -261,6 +426,7 @@ namespace CommunalPayments.Erc.Repository
                             Enabled = false,
                             ErcId = order.IdOrder,
                             Comment = order.Comment,
+                            Commission = order.Commission,
                             PaymentDate = DateTime.Now
                         };
                         if (DateTime.TryParse(order.DtCreate, culture, DateTimeStyles.AllowWhiteSpaces, out dt))
@@ -296,6 +462,7 @@ namespace CommunalPayments.Erc.Repository
                     CurrentIndication = orderItem.CurCounter,
                     LastIndication = orderItem.PrevCounter,
                     Value = orderItem.Diff,
+                    Options = orderItem.Options,
                     ServiceId = services.First(x => x.ErcId == orderItem.Service).Id,
                     PeriodFrom = PeriodFrom(orderItem.Month1)
                 };
@@ -318,6 +485,11 @@ namespace CommunalPayments.Erc.Repository
                 }
             }
             return retVal;
+        }
+        private string GetTime()
+        {
+            var time = (DateTime.Now.ToUniversalTime() - new DateTime(1970, 1, 1));
+            return Convert.ToString(Math.Round(time.TotalMilliseconds));
         }
         #endregion
 

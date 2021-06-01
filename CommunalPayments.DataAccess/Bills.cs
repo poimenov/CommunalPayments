@@ -34,18 +34,18 @@ namespace CommunalPayments.DataAccess
                         {
                             if (item.ErcId > 0 && !db.Bills.Any(x => x.ErcId == item.ErcId))
                             {
-                                if(!db.PayModes.Any(x=>x.Id == item.ModeId))
+                                if (!db.PayModes.Any(x => x.Id == item.ModeId))
                                 {
                                     //надо бы перечислить все способы в миграции
                                     //но этот код оставить на случай появления новых
-                                    db.PayModes.Add(new PayMode { Id = item.ModeId, Name = string.Format("Оплата способом № {0}", item.ModeId) });
+                                    db.PayModes.Add(new PayMode { Id = item.ModeId, Name = item.Mode.Name });
                                     db.SaveChanges();
                                 }
                                 if (!db.PayStatuses.Any(x => x.Id == item.StatusId))
                                 {
                                     //надо бы перечислить все способы в миграции
                                     //но этот код оставить на случай появления новых
-                                    db.PayStatuses.Add(new PayStatus { Id = item.StatusId, Name = string.Format("Статус № {0}", item.StatusId) });
+                                    db.PayStatuses.Add(new PayStatus { Id = item.StatusId, Name = item.Status.Name });
                                     db.SaveChanges();
                                 }
                                 var bill = new Bill()
@@ -70,7 +70,9 @@ namespace CommunalPayments.DataAccess
                                                 AccountId = pay.AccountId,
                                                 BillId = bill.Id,
                                                 Enabled = false,
+                                                Bbl = pay.Bbl,
                                                 Comment = pay.Comment,
+                                                Commission = pay.Commission,
                                                 PaymentDate = pay.PaymentDate
                                             };
                                             db.Payments.Add(payment);
@@ -89,7 +91,8 @@ namespace CommunalPayments.DataAccess
                                                         Enabled = false,
                                                         PeriodFrom = payItem.PeriodFrom,
                                                         PeriodTo = payItem.PeriodTo,
-                                                        PaymentId = payment.Id
+                                                        PaymentId = payment.Id,
+                                                        Options = payItem.Options
                                                     };
                                                     db.PaymentItems.Add(paymentItem);
                                                 }

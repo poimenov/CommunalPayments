@@ -79,6 +79,7 @@ namespace CommunalPayments.Common.Reports
     {
         html,
         xml
+        //pdf: https://www.nuget.org/packages/Fonet.Standard/
     }
     public struct BankInfo
     {

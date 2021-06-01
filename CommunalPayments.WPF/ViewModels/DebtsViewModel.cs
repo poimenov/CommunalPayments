@@ -1,4 +1,5 @@
 ﻿using CommunalPayments.Common;
+using CommunalPayments.Common.Interfaces;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using log4net;
@@ -21,11 +22,7 @@ namespace CommunalPayments.WPF.ViewModels
         private ILog _logger;
         private ResourceManager _resourceManager;
         private List<KeyValuePair<string, string>> _columns;
-        public enum PayBy
-        {
-            Credit,
-            Saldo
-        }
+
         public DebtsViewModel(Debt debt, ILog logger)
         {
             this.Debt = debt;

@@ -47,8 +47,11 @@ namespace CommunalPayments.Common
             {
                 return PaymentItems.Sum(x => x.Amount);
             }
-        }        
-        [Display(Name = "Comment", Order = 8, ResourceType = typeof(Properties.Resource))]
+        }
+        [ReadOnly(true)]
+        [Display(Name = "Commission", Order = 8, ResourceType = typeof(Properties.Resource))]
+        public decimal Commission { get; set; }
+        [Display(Name = "Comment", Order = 9, ResourceType = typeof(Properties.Resource))]
         public string Comment { get; set; }
         [Browsable(false)]
         public virtual List<PaymentItem> PaymentItems { get; set; }
@@ -57,5 +60,7 @@ namespace CommunalPayments.Common
         public int AccountId { get; set; }
         [Browsable(false)]
         public Account Account { get; set; }
+        [Browsable(false)]
+        public string Bbl { get; set; }
     }
 }

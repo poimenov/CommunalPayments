@@ -47,6 +47,8 @@ namespace CommunalPayments.Common
         public override bool Enabled { get; set; }
         [Browsable(false)]
         public override string Name => string.Format("{0}: {1}", Service?.Name, Amount);
+        [Browsable(false)]
+        public string Options { get; set; }
 
     }
 }

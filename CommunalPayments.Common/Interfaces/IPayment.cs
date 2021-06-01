@@ -10,5 +10,6 @@ namespace CommunalPayments.Common.Interfaces
     {
         Payment LastPayment(int accountId);
         IEnumerable<Payment> GetPayments(int? year, int? accountId);
+        int Create(Payment payment);
     }
 }

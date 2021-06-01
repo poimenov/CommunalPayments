@@ -235,13 +235,23 @@ namespace CommunalPayments.WPF.ViewModels
         #endregion
         #region SaveCmd
         public ICommand SaveCmd { get { return new RelayCommand(OnSave, () => (SelectedAccountId > 0)); } }
-        private void OnSave()
+        private async void OnSave()
         {
             List<Payment> payments = new List<Payment>();
             payments.Add(SelectedPayment);
             if (SelectedPayment.Id > 0)
             {
-                _dataAccess.Update(payments);
+                if(SelectedPayment.ErcId > 0 && ! string.IsNullOrEmpty(SelectedPayment.Bbl))
+                {
+                    if(await _netRepository.UpdatePayment(SelectedPayment))
+                    {
+                        _dataAccess.Update(payments);
+                    }
+                    else
+                    {
+                        //TODO: сообщение о том, что обновление не состоялось
+                    }
+                }                
             }
             else
             {
@@ -318,35 +328,39 @@ namespace CommunalPayments.WPF.ViewModels
                         success = _dialogService.ShowDialog(this, debtViewModel);
                         if (success == true)
                         {
-                            foreach (var item in ItemsList)
+                            var newPayment = await _netRepository.CreatePayment(account, debtViewModel.SelectedPayBy, DateTime.Today);
+                            if (null != newPayment)
                             {
-                                if (debt.DebtItems.Any(x => x.ServiceName.ToLower() == item.Service.Name.ToLower()))
+                                var itemsServIds = ItemsList.Select(x => x.ServiceId).ToList();
+                                var newServIds = newPayment.PaymentItems.Select(x => x.ServiceId).ToList();
+                                var servIds = itemsServIds.Except(newServIds).ToList();
+                                foreach (var id in servIds)
                                 {
-                                    var debtItem = debt.DebtItems.First(x => x.ServiceName.ToLower() == item.Service.Name.ToLower());
-                                    SetAmount(debtItem, item, debtViewModel.SelectedPayBy);
+                                    var debtItem = ItemsList.First(x => x.ServiceId == id);
+                                    if (_services.Any(x => x.Id == id))
+                                    {
+                                        var item = new PaymentItem();
+                                        item.Enabled = true;
+                                        item.Service = _services.First(x => x.Id == id);
+                                        item.ServiceId = item.Service.Id;
+                                        item.PeriodFrom = DateTime.Today.AddMonths(-1).AddDays(1 - DateTime.Today.Day);
+                                        item.PeriodTo = DateTime.Today.AddDays(-DateTime.Today.Day);
+                                        newPayment.PaymentItems.Add(item);
+                                    }
                                 }
-                            }
-                            var itemsServNames = ItemsList.Select(x => x.Service.Name).ToList();
-                            var debtServNames = debt.DebtItems.Select(x => x.ServiceName).ToList();
-                            var servNames = debtServNames.Except(itemsServNames).ToList();
-                            foreach (var serv in servNames)
-                            {
-                                var debtItem = debt.DebtItems.First(x => x.ServiceName.ToLower() == serv.ToLower());
-                                if (_services.Any(x => x.Name.ToLower() == serv.ToLower()))
+
+                                foreach (var item in ItemsList.Where(item => item.CurrentIndication.HasValue || item.LastIndication.HasValue || item.Value.HasValue))
                                 {
-                                    var item = new PaymentItem();
-                                    item.Enabled = true;
-                                    item.Service = _services.First(x => x.Name.ToLower() == serv.ToLower());
-                                    item.ServiceId = item.Service.Id;
-                                    item.PeriodFrom = DateTime.Today.AddMonths(-1).AddDays(1 - DateTime.Today.Day);
-                                    item.PeriodTo = DateTime.Today.AddDays(-DateTime.Today.Day);
-                                    SetAmount(debtItem, item, debtViewModel.SelectedPayBy);
-                                    ItemsList.Add(item);
+                                    if (newPayment.PaymentItems.Any(x => x.ServiceId == item.ServiceId))
+                                    {
+                                        var newItem = newPayment.PaymentItems.First(x => x.ServiceId == item.ServiceId);
+                                        newItem.CurrentIndication = item.CurrentIndication;
+                                        newItem.LastIndication = item.LastIndication;
+                                        newItem.Value = item.Value;
+                                    }
                                 }
+                                SelectedPayment = _dataAccess.Get(_dataAccess.Create(newPayment));
                             }
-                            ItemsList = new ObservableCollection<PaymentItem>(ItemsList);
-                            RaisePropertyChanged(() => ItemsList);
-                            RaisePropertyChanged(() => SelectedPayment);
                         }
                     }
                 }
@@ -359,24 +373,6 @@ namespace CommunalPayments.WPF.ViewModels
                     _importInProcess = false;
                     this.CanClose = true;
                 }
-            }
-        }
-        private void SetAmount(DebtItem source, PaymentItem destination, DebtsViewModel.PayBy payBy)
-        {
-            switch (payBy)
-            {
-                case DebtsViewModel.PayBy.Credit:
-                    if (source.Credited.HasValue)
-                    {
-                        destination.Amount = source.Credited.Value;
-                    }
-                    break;
-                case DebtsViewModel.PayBy.Saldo:
-                    if (source.Saldo.HasValue)
-                    {
-                        destination.Amount = source.Saldo.Value;
-                    }
-                    break;
             }
         }
         #endregion

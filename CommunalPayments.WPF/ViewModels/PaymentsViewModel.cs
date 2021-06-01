@@ -17,6 +17,7 @@ namespace CommunalPayments.WPF.ViewModels
     {
         private readonly IPayment _dataAccess;
         private readonly IDialogService _dialogService;
+        private readonly INetRepository _netRepository;
         protected override Type GetGridItemType
         {
             get
@@ -63,10 +64,11 @@ namespace CommunalPayments.WPF.ViewModels
         #endregion
         public ObservableCollection<Payment> Payments { get; private set; }
         public ObservableCollection<Account> Accounts { get; private set; }
-        public PaymentsViewModel(IDialogService dialogService, IPayment dataAccess, IDataAccess<Account> accounts, ILog logger) : base(logger)
+        public PaymentsViewModel(IDialogService dialogService, IPayment dataAccess, IDataAccess<Account> accounts, INetRepository netRepository, ILog logger) : base(logger)
         {
             _dataAccess = dataAccess;
             _dialogService = dialogService;
+            _netRepository = netRepository;
             _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
             _columns.Add(new KeyValuePair<string, string>("Name", "Name"));
             _columns.Add(new KeyValuePair<string, string>("Sum", "Sum"));
@@ -99,7 +101,7 @@ namespace CommunalPayments.WPF.ViewModels
         #endregion
         #region DeleteCmd
         public RelayCommand<object> DeleteCmd { get { return new RelayCommand<object>(OnDelete, obj => (obj != null && ((Entity)obj).Enabled && Payments.Count > 0), false); } }
-        private void OnDelete(object obj)
+        private async void OnDelete(object obj)
         {
             Payment item = obj as Payment;
             var _deletedIds = new List<int>();
@@ -113,9 +115,21 @@ namespace CommunalPayments.WPF.ViewModels
                 settings.Icon = System.Windows.MessageBoxImage.Question;                
                 if(System.Windows.MessageBoxResult.Yes == _dialogService.ShowMessageBox(this, settings))
                 {
-                    _dataAccess.Delete(_deletedIds);
-                    Payments = new ObservableCollection<Payment>(_dataAccess.GetPayments(null, SelectedAccount.Id));
-                    RaisePropertyChanged(() => Payments);
+                    var isOk = true;
+                    if (item.ErcId > 0 && !string.IsNullOrEmpty(item.Bbl))
+                    {
+                        isOk = await _netRepository.DeletePayment(item);
+                        if (!isOk)
+                        {
+                            //TODO: сообщение о том, что удаление не состоялось
+                        }
+                    }
+                    if(isOk)
+                    {
+                        _dataAccess.Delete(_deletedIds);
+                        Payments = new ObservableCollection<Payment>(_dataAccess.GetPayments(null, SelectedAccount.Id));
+                        RaisePropertyChanged(() => Payments);
+                    }
                 }
             }
         }
