@@ -151,20 +151,7 @@ namespace CommunalPayments.WPF.ViewModels
         private void OnExportHtml(object obj)
         {
             Payment item = obj as Payment;
-            if (item != null && item.Id > 0)
-            {
-                string reportPath;
-                PaymentReport.Create(item, ReportFormat.html, Bank, out reportPath);
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "cmd",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    Arguments = $"/c {reportPath}"
-                };
-                Process.Start(psi);
-            }
+            ShowReport(item, ReportFormat.html);
         }
         #endregion
         #region ExportXmlCmd
@@ -172,20 +159,15 @@ namespace CommunalPayments.WPF.ViewModels
         private void OnExportXml(object obj)
         {
             Payment item = obj as Payment;
-            if (item != null && item.Id > 0)
-            {
-                string reportPath;
-                PaymentReport.Create(item, ReportFormat.xml, Bank, out reportPath);
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "cmd",
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    Arguments = $"/c {reportPath}"
-                };
-                Process.Start(psi);
-            }
+            ShowReport(item, ReportFormat.xml);
+        }
+        #endregion
+        #region ExportPdfCmd
+        public RelayCommand<object> ExportPdfCmd { get { return new RelayCommand<object>(OnExportPdf, obj => (obj != null && Payments.Count > 0), false); } }
+        private void OnExportPdf(object obj)
+        {
+            Payment item = obj as Payment;
+            ShowReport(item, ReportFormat.pdf);
         }
         #endregion
         private BankInfo Bank
@@ -194,6 +176,23 @@ namespace CommunalPayments.WPF.ViewModels
             {
                 var settings = Properties.Settings.Default;
                 return new BankInfo(settings.BankName, settings.BankAccount, settings.EDRPOU);
+            }
+        }
+        private void ShowReport(Payment payment, ReportFormat format)
+        {
+            if (payment != null && payment.Id > 0)
+            {
+                string reportPath;
+                PaymentReport.Create(payment, format, Bank, out reportPath);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "cmd",
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    Arguments = $"/c {reportPath}"
+                };
+                Process.Start(psi);
             }
         }
     }

@@ -6,6 +6,9 @@
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Reports\Payment.pdf.xslt" />
+  </ItemGroup>
+  <ItemGroup>
     <EmbeddedResource Update="Properties\Resource.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resource.Designer.cs</LastGenOutput>
@@ -16,11 +19,13 @@
     <EmbeddedResource Include="Reports\Payment.html.xslt">
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <EmbeddedResource Include="Reports\Payment.pdf.xslt" />
     <EmbeddedResource Include="Reports\Payment.xml.xslt">
       <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Fonet.Standard" Version="1.0.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
   </ItemGroup>

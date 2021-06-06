@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using System.Xml.Xsl;
+using Fonet;
 
 namespace CommunalPayments.Common.Reports
 {
@@ -38,7 +40,40 @@ namespace CommunalPayments.Common.Reports
             {
                 GetTransform(format).Transform(GetDocument(payment), args, writer);
             }
+            if(format == ReportFormat.pdf && File.Exists(reportPath))
+            {
+                var driver = Fonet.FonetDriver.Make();
+                driver.Options = new Fonet.Render.Pdf.PdfRendererOptions
+                {
+                    FontType = Fonet.Render.Pdf.FontType.Subset
+                };
+                driver.OnError += Driver_OnError;
+                driver.OnInfo += Driver_OnInfo;
+                driver.OnWarning += Driver_OnWarning;
+                XmlDocument document = new XmlDocument();
+                document.Load(reportPath);
+                using (var stream = File.OpenWrite(reportPath))
+                {
+                    driver.Render(document, stream);
+                }
+            }
         }
+
+        private static void Driver_OnWarning(object driver, FonetEventArgs e)
+        {
+            Debug.WriteLine(string.Format("driver warning: {0}", e.GetMessage()));
+        }
+
+        private static void Driver_OnInfo(object driver, FonetEventArgs e)
+        {
+            Debug.WriteLine(string.Format("driver info: {0}", e.GetMessage()));
+        }
+
+        private static void Driver_OnError(object driver, FonetEventArgs e)
+        {
+            Debug.WriteLine(string.Format("driver error: {0}", e.GetMessage()));
+        }
+
         public static string Create(Payment payment, ReportFormat format)
         {
             StringBuilder sb = new StringBuilder();
@@ -78,8 +113,8 @@ namespace CommunalPayments.Common.Reports
     public enum ReportFormat
     {
         html,
-        xml
-        //pdf: https://www.nuget.org/packages/Fonet.Standard/
+        xml,
+        pdf
     }
     public struct BankInfo
     {
