@@ -38,8 +38,8 @@ namespace CommunalPayments.Erc.Repository
         //https://erc.megabank.ua/ru/service/publicutilities/paysdebt/2/2/202104
         private const string createUrl = "/ru/service/publicutilities/paysdebt/{0}/{1}/{2}";
         private const string deleteUrl = "/ru/cabinet/resp/orderdelete";
-        public string Login { set; private get; }
-        public string Password { set; private get; }
+        public string Login { set; get; }
+        public string Password { set; get; }
         public event EventHandler<ProgressChangedEventArgs> ImportProgressChanged;
         protected virtual void OnProgressChanged(decimal progressPercentage, string currentUrl)
         {
@@ -73,7 +73,7 @@ namespace CommunalPayments.Erc.Repository
             try
             {
                 using (HttpClient client = new HttpClient())
-                {                    
+                {
                     if (!await Login2Site(client))
                     {
                         return retVal;
@@ -81,18 +81,18 @@ namespace CommunalPayments.Erc.Repository
                     var accounts = await GetAccounts(client, userId);
                     if (accounts.Count > 0)
                     {
-                        
+
                         var bills = await GetBills(client, accounts);
-                        if(bills.Count() == 0)
+                        if (bills.Count() == 0)
                         {
                             OnProgressChanged(100, "No new entries");
                             return true;
                         }
                         var proc = (decimal)96 / (decimal)bills.SelectMany(b => b.Payments, (b, p) => new { b, p }).Count();
                         decimal currProc = 5;
-                        foreach (var bill in bills)
+                        foreach (var bill in bills.OrderBy(b => b.ErcId))
                         {
-                            foreach (var payment in bill.Payments)
+                            foreach (var payment in bill.Payments.OrderBy(b => b.ErcId))
                             {
                                 try
                                 {
@@ -167,7 +167,7 @@ namespace CommunalPayments.Erc.Repository
                         if (response.StatusCode == HttpStatusCode.OK)
                         {
                             var url = response.RequestMessage.RequestUri.ToString();
-                            if(!url.Contains("/ru/service/publicutilities/orderedit"))
+                            if (!url.Contains("/ru/service/publicutilities/orderedit"))
                             {
                                 return null;
                             }
@@ -214,40 +214,40 @@ namespace CommunalPayments.Erc.Repository
                         {
                             return retVal;
                         }
-                        foreach(var item in payment.PaymentItems.Where(p=>string.IsNullOrEmpty(p.Options)))
+                        foreach (var item in payment.PaymentItems.Where(p => string.IsNullOrEmpty(p.Options)))
                         {
                             item.Options = GetTime();
                         }
                         var orderItems = new List<OrderItem>();
-                        foreach (var item in payment.PaymentItems)
+                        foreach (var item in payment.PaymentItems.OrderBy(p => p.ServiceId))
                         {
                             orderItems.Add(new OrderItem()
                             {
                                 Service = item.ServiceId,
                                 Amount = item.Amount,
-                                CurCounter = item.CurrentIndication,
-                                PrevCounter = item.LastIndication,
-                                Diff = item.Value,
-                                Month1 = item.PeriodFrom.AddMonths(-1).ToString("yyyyMM"),
-                                Month2 = item.PeriodTo.AddMonths(-1).ToString("yyyyMM"),
+                                CurCounter = item.CurrentIndication.HasValue ? item.CurrentIndication.Value : 0m,
+                                PrevCounter = item.LastIndication.HasValue ? item.LastIndication.Value : 0m,
+                                Diff = item.Value.HasValue ? item.Value.Value : 0m,
+                                Month1 = item.PeriodFrom.ToString("yyyyMM"),
+                                Month2 = item.PeriodTo.ToString("yyyyMM"),
                                 Options = item.Options
                             });
                         }
-                        
+
                         var postData = new List<KeyValuePair<string, string>>();
-                        postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(orderItems)));
+                        postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(orderItems).ToLower()));
                         postData.Add(new KeyValuePair<string, string>("cdf", payment.Account.Number.ToString()));
                         postData.Add(new KeyValuePair<string, string>("idf", "0"));
                         postData.Add(new KeyValuePair<string, string>("ido", payment.ErcId.ToString()));
                         postData.Add(new KeyValuePair<string, string>("bbl", payment.Bbl));
-                        
+
                         using (var content = new FormUrlEncodedContent(postData))
                         {
                             using (var response = await client.PostAsync(paysOrderUrl, content))
                             {
                                 if (response.StatusCode == HttpStatusCode.OK)
                                 {
-                                    return true; 
+                                    return true;
                                 }
                             }
                         }
@@ -274,8 +274,9 @@ namespace CommunalPayments.Erc.Repository
                         {
                             return retVal;
                         }
+                        var ids = new long[] { payment.ErcId };
                         var postData = new List<KeyValuePair<string, string>>();
-                        postData.Add(new KeyValuePair<string, string>("sorder", payment.ErcId.ToString()));
+                        postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(ids)));
                         using (var content = new FormUrlEncodedContent(postData))
                         {
                             using (var response = await client.PostAsync(deleteUrl, content))
@@ -344,7 +345,7 @@ namespace CommunalPayments.Erc.Repository
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
                         var strContent = await response.Content.ReadAsStringAsync();
-                        if(strContent.Contains("Извините, это имя пользователя или пароль неверны"))
+                        if (strContent.Contains("Извините, это имя пользователя или пароль неверны"))
                         {
                             return false;
                         }

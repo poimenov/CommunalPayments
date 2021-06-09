@@ -37,9 +37,9 @@
             </b:Interaction.Triggers>
             <DataGrid.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Export to Html" Command="{Binding ExportHtmlCmd}" CommandParameter="{Binding SelectedItem}"/>
-                    <MenuItem Header="Export to Excel" Command="{Binding ExportXmlCmd}" CommandParameter="{Binding SelectedItem}"/>
-                    <MenuItem Header="Export to Pdf" Command="{Binding ExportPdfCmd}" CommandParameter="{Binding SelectedItem}"/>
+                    <MenuItem Header="Экспорт в Html" Command="{Binding ExportHtmlCmd}" CommandParameter="{Binding SelectedItem}"/>
+                    <MenuItem Header="Экспорт в Excel" Command="{Binding ExportXmlCmd}" CommandParameter="{Binding SelectedItem}"/>
+                    <MenuItem Header="Экспорт в Pdf" Command="{Binding ExportPdfCmd}" CommandParameter="{Binding SelectedItem}"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>
         </DataGrid>

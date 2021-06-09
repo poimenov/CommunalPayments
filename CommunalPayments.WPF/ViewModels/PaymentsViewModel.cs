@@ -112,19 +112,29 @@ namespace CommunalPayments.WPF.ViewModels
                 settings.Caption = App.ResGlobal.GetString("DeletePaymentCaption");
                 settings.MessageBoxText = App.ResGlobal.GetString("DeletePaymentMessage");
                 settings.Button = System.Windows.MessageBoxButton.YesNo;
-                settings.Icon = System.Windows.MessageBoxImage.Question;                
-                if(System.Windows.MessageBoxResult.Yes == _dialogService.ShowMessageBox(this, settings))
+                settings.Icon = System.Windows.MessageBoxImage.Question;
+                if (System.Windows.MessageBoxResult.Yes == _dialogService.ShowMessageBox(this, settings))
                 {
                     var isOk = true;
                     if (item.ErcId > 0 && !string.IsNullOrEmpty(item.Bbl))
                     {
+                        if (string.IsNullOrEmpty(_netRepository.Login) || string.IsNullOrEmpty(_netRepository.Login))
+                        {
+                            var loginViewModel = new LoginViewModel();
+                            var success = _dialogService.ShowDialog(this, loginViewModel);
+                            if (success == true)
+                            {
+                                _netRepository.Login = loginViewModel.Login;
+                                _netRepository.Password = loginViewModel.Password;
+                            }
+                        }
                         isOk = await _netRepository.DeletePayment(item);
                         if (!isOk)
                         {
-                            //TODO: сообщение о том, что удаление не состоялось
+                            _dialogService.ShowMessageBox(this, App.ResGlobal.GetString("PaymentNotDeleted"), App.ResGlobal.GetString("InfoTitle"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                         }
                     }
-                    if(isOk)
+                    if (isOk)
                     {
                         _dataAccess.Delete(_deletedIds);
                         Payments = new ObservableCollection<Payment>(_dataAccess.GetPayments(null, SelectedAccount.Id));

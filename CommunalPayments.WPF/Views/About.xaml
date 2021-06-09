@@ -12,7 +12,7 @@
     <StackPanel HorizontalAlignment="Center">
         <TextBlock TextAlignment="Center" Text="{Binding Content}" />
         <TextBlock HorizontalAlignment="Center">           
-            <Hyperlink NavigateUri="mailto:poimenov@gmail.com">poimenov@gmail.com
+            <Hyperlink NavigateUri="https://github.com/poimenov/CommunalPayments">https://github.com/poimenov/CommunalPayments
                 <b:Interaction.Triggers>
                     <b:EventTrigger EventName="RequestNavigate">
                         <b:InvokeCommandAction Command="{Binding NavigateCmd}" PassEventArgsToCommand="True"/>

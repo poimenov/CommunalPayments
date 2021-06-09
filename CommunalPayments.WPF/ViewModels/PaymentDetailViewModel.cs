@@ -243,14 +243,26 @@ namespace CommunalPayments.WPF.ViewModels
             {
                 if(SelectedPayment.ErcId > 0 && ! string.IsNullOrEmpty(SelectedPayment.Bbl))
                 {
-                    if(await _netRepository.UpdatePayment(SelectedPayment))
+                    if (string.IsNullOrEmpty(_netRepository.Login) || string.IsNullOrEmpty(_netRepository.Login))
+                    {
+                        var loginViewModel = new LoginViewModel();
+                        var success = _dialogService.ShowDialog(this, loginViewModel);
+                        if (success == true)
+                        {
+                            _netRepository.Login = loginViewModel.Login;
+                            _netRepository.Password = loginViewModel.Password;
+                        }
+                    }
+                    this.Cursor = Cursors.Wait;
+                    if (await _netRepository.UpdatePayment(SelectedPayment))
                     {
                         _dataAccess.Update(payments);
                     }
                     else
                     {
-                        //TODO: сообщение о том, что обновление не состоялось
+                        _dialogService.ShowMessageBox(this, App.ResGlobal.GetString("PaymentNotUpdated"), App.ResGlobal.GetString("InfoTitle"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                     }
+                    this.Cursor = Cursors.Arrow;
                 }                
             }
             else
@@ -311,6 +323,7 @@ namespace CommunalPayments.WPF.ViewModels
                 _netRepository.Password = loginViewModel.Password;
                 _importInProcess = true;
                 this.CanClose = false;
+                this.Cursor = Cursors.Wait;
                 try
                 {
                     var debt = await _netRepository.GetDebt(account, DateTime.Today);
@@ -372,6 +385,7 @@ namespace CommunalPayments.WPF.ViewModels
                 {
                     _importInProcess = false;
                     this.CanClose = true;
+                    this.Cursor = Cursors.Arrow;
                 }
             }
         }

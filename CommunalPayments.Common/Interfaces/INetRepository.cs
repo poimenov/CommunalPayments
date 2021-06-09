@@ -18,7 +18,7 @@ namespace CommunalPayments.Common.Interfaces
         Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date);
         Task<bool> UpdatePayment(Payment payment);
         Task<bool> DeletePayment(Payment payment);
-        string Login { set; }
-        string Password { set; }
+        string Login { get; set; }
+        string Password { get; set; }
     }
 }

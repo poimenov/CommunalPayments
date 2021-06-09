@@ -125,6 +125,20 @@ namespace CommunalPayments.WPF.ViewModels
         }
         #endregion
 
+        private Cursor _cursor = Cursors.Arrow;
+        public Cursor Cursor
+        {
+            get { return _cursor; }
+            set 
+            { 
+                if(_cursor != value)
+                {
+                    _cursor = value;
+                    RaisePropertyChanged(nameof(Cursor));
+                }
+            }
+        }
+
         public ImageSource IconSource
         {
             get;

@@ -150,6 +150,9 @@
   <data name="ImportSuccessMessage" xml:space="preserve">
     <value>Информация о платежах успешно импортрована</value>
   </data>
+  <data name="InfoTitle" xml:space="preserve">
+    <value>Информация</value>
+  </data>
   <data name="Payment" xml:space="preserve">
     <value>Квитанция</value>
   </data>
@@ -158,6 +161,12 @@
   </data>
   <data name="PaymentItem" xml:space="preserve">
     <value>Строка квитанции</value>
+  </data>
+  <data name="PaymentNotDeleted" xml:space="preserve">
+    <value>Квитация не была удалена. Попробуйте повторить операцию через некоторое время.</value>
+  </data>
+  <data name="PaymentNotUpdated" xml:space="preserve">
+    <value>Изменения не были сохранены. Попробуйте повторить операцию через некоторое время.</value>
   </data>
   <data name="Payments" xml:space="preserve">
     <value>Квитанции</value>

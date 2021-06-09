@@ -139,7 +139,7 @@
     <value>От Чорт, щось пішло Не так i додаток буде закрито. Звіт про помилку можна подивитися тут: {0} {1} Якщо це не спрацювало, повідомте Олександру Пойменову.</value>
   </data>
   <data name="ErrorTitle" xml:space="preserve">
-    <value>Нежданчик</value>
+    <value>Несподіванка</value>
   </data>
   <data name="Failure" xml:space="preserve">
     <value>Журбинка :(</value>
@@ -150,6 +150,9 @@
   <data name="ImportSuccessMessage" xml:space="preserve">
     <value>Інформація про платежі успішно імпортрована</value>
   </data>
+  <data name="InfoTitle" xml:space="preserve">
+    <value>Інформація</value>
+  </data>
   <data name="Payment" xml:space="preserve">
     <value>Квитанція</value>
   </data>
@@ -158,6 +161,12 @@
   </data>
   <data name="PaymentItem" xml:space="preserve">
     <value>Рядок Квитанції</value>
+  </data>
+  <data name="PaymentNotDeleted" xml:space="preserve">
+    <value>Квітацію не було вилучено. Спробуйте повторити операцію через деякий час</value>
+  </data>
+  <data name="PaymentNotUpdated" xml:space="preserve">
+    <value>Зміни не були збережені. Спробуйте повторити операцію через деякий час.</value>
   </data>
   <data name="Payments" xml:space="preserve">
     <value>Квитанції</value>
