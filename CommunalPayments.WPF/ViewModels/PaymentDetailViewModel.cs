@@ -45,7 +45,7 @@ namespace CommunalPayments.WPF.ViewModels
             _dialogService = dialogService;
             _netRepository = netRepository;
         }
-        public override string ItemTypeName { get => App.ResGlobal.GetString("PaymentItem");}
+        public override string ItemTypeName { get => App.ResGlobal.GetString("PaymentItem"); }
         public void ChangedItem(PaymentItem item)
         {
             if (item.LastIndication.HasValue && item.CurrentIndication.HasValue)
@@ -63,7 +63,7 @@ namespace CommunalPayments.WPF.ViewModels
                             ServiceId = 6,
                             PeriodFrom = DateTime.Today.AddMonths(-1).AddDays(1 - DateTime.Today.Day),
                             PeriodTo = DateTime.Today.AddDays(-DateTime.Today.Day)
-                    });
+                        });
                     }
                     var canal = ItemsList.First(x => x.ServiceId == 6);
                     if (!canal.Value.HasValue)
@@ -96,7 +96,7 @@ namespace CommunalPayments.WPF.ViewModels
         }
         public void RefreshSelectedPayment(PaymentItem paymentItem = null)
         {
-            var item = (null == paymentItem)? SelectedItem : paymentItem;
+            var item = (null == paymentItem) ? SelectedItem : paymentItem;
             SelectedPayment = SelectedPayment;
             SelectedItem = item;
         }
@@ -206,11 +206,11 @@ namespace CommunalPayments.WPF.ViewModels
                     ItemsList = null;
                     //if new paymment
                     if (_selectedAccountId > 0 && SelectedPayment.Id == 0)
-                    {                        
+                    {
                         var lastPayment = _dataAccess.LastPayment(_selectedAccountId);
                         var payment = new Payment() { Enabled = true };
                         var lst = new List<PaymentItem>();
-                        if (null != lastPayment && null !=lastPayment.PaymentItems)
+                        if (null != lastPayment && null != lastPayment.PaymentItems)
                         {
                             foreach (var prev in lastPayment.PaymentItems)
                             {
@@ -223,7 +223,7 @@ namespace CommunalPayments.WPF.ViewModels
                                 curr.PeriodFrom = DateTime.Today.AddMonths(-1).AddDays(1 - DateTime.Today.Day);
                                 curr.PeriodTo = DateTime.Today.AddDays(-DateTime.Today.Day);
                                 payment.PaymentItems.Add(curr);
-                            }                            
+                            }
                         }
                         SelectedPayment = payment;
                     }
@@ -241,7 +241,7 @@ namespace CommunalPayments.WPF.ViewModels
             payments.Add(SelectedPayment);
             if (SelectedPayment.Id > 0)
             {
-                if(SelectedPayment.ErcId > 0 && ! string.IsNullOrEmpty(SelectedPayment.Bbl))
+                if (SelectedPayment.ErcId > 0 && !string.IsNullOrEmpty(SelectedPayment.Bbl))
                 {
                     if (string.IsNullOrEmpty(_netRepository.Login) || string.IsNullOrEmpty(_netRepository.Login))
                     {
@@ -263,7 +263,7 @@ namespace CommunalPayments.WPF.ViewModels
                         _dialogService.ShowMessageBox(this, App.ResGlobal.GetString("PaymentNotUpdated"), App.ResGlobal.GetString("InfoTitle"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                     }
                     this.Cursor = Cursors.Arrow;
-                }                
+                }
             }
             else
             {

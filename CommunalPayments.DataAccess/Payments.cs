@@ -122,7 +122,7 @@ namespace CommunalPayments.DataAccess
             {
                 foreach (var payment in payments)
                 {
-                    var entity = db.Payments.First(x => x.Id == payment.Id);
+                    var entity = db.Payments.Include(x => x.PaymentItems).First(x => x.Id == payment.Id);
                     entity.AccountId = payment.AccountId;
                     entity.Comment = payment.Comment;
                     entity.Enabled = payment.Enabled;
