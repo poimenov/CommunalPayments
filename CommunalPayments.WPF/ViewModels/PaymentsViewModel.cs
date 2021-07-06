@@ -70,6 +70,7 @@ namespace CommunalPayments.WPF.ViewModels
             _dialogService = dialogService;
             _netRepository = netRepository;
             _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
+            _columns.Add(new KeyValuePair<string, string>("ErcId", "ErcId"));
             _columns.Add(new KeyValuePair<string, string>("Name", "Name"));
             _columns.Add(new KeyValuePair<string, string>("Sum", "Sum"));
             _columns.Add(new KeyValuePair<string, string>("Comment", "Comment"));
