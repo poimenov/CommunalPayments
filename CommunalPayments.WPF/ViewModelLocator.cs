@@ -43,6 +43,7 @@ namespace CommunalPayments.WPF
             SimpleIoc.Default.Register<IPayment, Payments>();
             SimpleIoc.Default.Register<IDataAccess<Account>, Accounts>();
             SimpleIoc.Default.Register<INetRepository, NetRepository>();
+            SimpleIoc.Default.Register<IImporter, Importer>();
             SimpleIoc.Default.Register<DataModel>();
             SimpleIoc.Default.Register<MainViewModel>();
             SimpleIoc.Default.Register<PaymentsViewModel>();

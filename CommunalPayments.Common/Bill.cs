@@ -41,6 +41,6 @@ namespace CommunalPayments.Common
         public virtual List<Payment> Payments { get; set; }
         [NotMapped]
         [Display(Name = "Name", Order = 6, ResourceType = typeof(Properties.Resource))]
-        public override string Name => string.Format("Счёт №{0} от {1}", this.Id, this.CreateDate.ToString("dd MMM yyyy"));
+        public override string Name => string.Format("Счёт №{0} от {1}", this.ErcId, this.CreateDate.ToString("dd MMM yyyy"));
     }
 }

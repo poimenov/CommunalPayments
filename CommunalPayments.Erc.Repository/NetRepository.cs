@@ -19,9 +19,6 @@ namespace CommunalPayments.Erc.Repository
     public class NetRepository : INetRepository
     {
         private readonly ILog _logger;
-        private readonly IDataAccess<Common.Bill> _bills;
-        private readonly IDataAccess<Account> _accounts;
-        private readonly IDataAccess<Service> _services;
         private const string baseUrl = "https://erc.megabank.ua";
         private const string loginUrl = "/ru/node?destination=node";
         private const string accountsUrl = "/ru/service/publicutilities";
@@ -40,84 +37,34 @@ namespace CommunalPayments.Erc.Repository
         private const string deleteUrl = "/ru/cabinet/resp/orderdelete";
         public string Login { set; get; }
         public string Password { set; get; }
-        public event EventHandler<ProgressChangedEventArgs> ImportProgressChanged;
-        protected virtual void OnProgressChanged(decimal progressPercentage, string currentUrl)
-        {
-            _logger.Info(string.Format("progressPercentage: {0}%, currentUrl: {1}", progressPercentage, currentUrl));
-            if (progressPercentage > 100)
-            {
-                progressPercentage = 100;
-            }
-            if (null != ImportProgressChanged)
-            {
-                ImportProgressChanged.Invoke(this, new ProgressChangedEventArgs(Convert.ToInt32(progressPercentage), currentUrl));
-            }
-        }
-
-        public NetRepository(ILog logger, IDataAccess<Common.Bill> bills, IDataAccess<Account> accounts, IDataAccess<Service> services)
+        public NetRepository(ILog logger)
         {
             _logger = logger;
-            _bills = bills;
-            _services = services;
-            _accounts = accounts;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
         }
-        public async Task<bool> Import(int userId)
+        public async IAsyncEnumerable<(Common.Bill, int, int)> GetBills(IEnumerable<Account> accounts, IEnumerable<Service> services)
         {
-            bool retVal = false;
-            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
-            {
-                return retVal;
-            }
-            _logger.Info(string.Format("Import starts at {0}", DateTime.Now));
-            try
-            {
-                using (HttpClient client = new HttpClient())
-                {
-                    if (!await Login2Site(client))
-                    {
-                        return retVal;
-                    }
-                    var accounts = await GetAccounts(client, userId);
-                    if (accounts.Count > 0)
-                    {
+            var retVal = new List<Common.Bill>();
 
-                        var bills = await GetBills(client, accounts);
-                        if (bills.Count() == 0)
+            using (HttpClient client = new HttpClient())
+            {
+                if (await Login2Site(client))
+                {
+                    var bills = await GetBillsList(client, accounts);
+                    int i = 0;
+                    var count = bills.SelectMany(b => b.Payments, (b, p) => new { b, p }).Count();
+                    foreach (var bill in bills.OrderBy(b => b.ErcId))
+                    {
+                        foreach (var payment in bill.Payments.OrderBy(b => b.ErcId))
                         {
-                            OnProgressChanged(100, "No new entries");
-                            return true;
+                            payment.PaymentItems.AddRange(await GetPaymentItems(client, payment.ErcId, services));
+                            i++;
                         }
-                        var proc = (decimal)96 / (decimal)bills.SelectMany(b => b.Payments, (b, p) => new { b, p }).Count();
-                        decimal currProc = 5;
-                        foreach (var bill in bills.OrderBy(b => b.ErcId))
-                        {
-                            foreach (var payment in bill.Payments.OrderBy(b => b.ErcId))
-                            {
-                                try
-                                {
-                                    OnProgressChanged(currProc, string.Concat(baseUrl, orderUrl, payment.ErcId.ToString()));
-                                    payment.PaymentItems.AddRange(await GetPaymentItems(client, payment.ErcId));
-                                    currProc += proc;
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.Error(ex.Message, ex);
-                                }
-                            }
-                            _bills.Create(new List<Common.Bill>() { bill });
-                        }
-                        retVal = true;
+                        yield return (bill, count, i);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.Error(ex.Message, ex);
-                return false;
-            }
-            _logger.Info(string.Format("Import finish at {0}", DateTime.Now));
-            return retVal;
+
         }
         public async Task<Debt> GetDebt(Account account, DateTime date)
         {
@@ -144,7 +91,7 @@ namespace CommunalPayments.Erc.Repository
             }
             return retVal;
         }
-        public async Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date)
+        public async Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date, IEnumerable<Service> services)
         {
             var retVal = new Payment();
             retVal.Account = account;
@@ -188,7 +135,7 @@ namespace CommunalPayments.Erc.Repository
                                     }
                                 }
                             }
-                            retVal.PaymentItems.AddRange(await GetPaymentItems(client, retVal.ErcId));
+                            retVal.PaymentItems.AddRange(await GetPaymentItems(client, retVal.ErcId, services));
                             retVal.PaymentItems.ForEach(item => item.Enabled = true);
                         }
                     }
@@ -223,7 +170,7 @@ namespace CommunalPayments.Erc.Repository
                         {
                             orderItems.Add(new OrderItem()
                             {
-                                Service = item.ServiceId,
+                                Service = item.Service.ErcId,
                                 Amount = item.Amount,
                                 CurCounter = item.CurrentIndication.HasValue ? item.CurrentIndication.Value : 0m,
                                 PrevCounter = item.LastIndication.HasValue ? item.LastIndication.Value : 0m,
@@ -324,7 +271,6 @@ namespace CommunalPayments.Erc.Repository
         {
             bool retVal = false;
             client.BaseAddress = new Uri(baseUrl);
-            OnProgressChanged(1, string.Concat(baseUrl, "/ru"));
             var loginPage = await client.GetStringAsync("/ru");
             var doc = new HtmlDocument();
             doc.LoadHtml(loginPage);
@@ -339,7 +285,6 @@ namespace CommunalPayments.Erc.Repository
 
             using (var content = new FormUrlEncodedContent(postData))
             {
-                OnProgressChanged(2, string.Concat(baseUrl, loginUrl));
                 using (var response = await client.PostAsync(loginUrl, content))
                 {
                     if (response.StatusCode == HttpStatusCode.OK)
@@ -360,33 +305,45 @@ namespace CommunalPayments.Erc.Repository
 
             return retVal;
         }
-        private async Task<List<Account>> GetAccounts(HttpClient client, int userId)
+        public async Task<IEnumerable<Account>> GetAccounts(int userId)
         {
-            OnProgressChanged(3, string.Concat(baseUrl, accountsUrl));
-            var page = await client.GetStringAsync(accountsUrl);
-            List<Account> accounts = new List<Account>();
-            var doc = new HtmlDocument();
-            doc.LoadHtml(page);
-            foreach (var div in doc.DocumentNode.SelectNodes("//div[@class=\"block_lic\"]"))
+            List<Account> retVal = new List<Account>();
+            try
             {
-                var account = new Account() { PersonId = userId, Enabled = true, Payments = new List<Payment>() };
-                account.Number = Convert.ToInt64(div.SelectSingleNode("h3[@class=\"title\"]/child::text()[1]").InnerText);
-                account.Key = div.SelectSingleNode("a[text()=\"Оплатить\"]").Attributes["href"].Value.Substring(29);
-                account.InternalId = Convert.ToInt32(div.SelectSingleNode("a[text()=\"Данные о задолженности\"]").Attributes["href"].Value.Substring(33));
-                account.City = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[1]").InnerText;
-                account.Street = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[2]").InnerText;
-                account.Building = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[1]").InnerText;
-                account.Apartment = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[2]").InnerText;
-                accounts.Add(account);
+                using (HttpClient client = new HttpClient())
+                {
+                    if (!await Login2Site(client))
+                    {
+                        return retVal;
+                    }
+                    var page = await client.GetStringAsync(accountsUrl);
+
+                    var doc = new HtmlDocument();
+                    doc.LoadHtml(page);
+                    foreach (var div in doc.DocumentNode.SelectNodes("//div[@class=\"block_lic\"]"))
+                    {
+                        var account = new Account() { PersonId = userId, Enabled = true, Payments = new List<Payment>() };
+                        account.Number = Convert.ToInt64(div.SelectSingleNode("h3[@class=\"title\"]/child::text()[1]").InnerText);
+                        account.Key = div.SelectSingleNode("a[text()=\"Оплатить\"]").Attributes["href"].Value.Substring(29);
+                        account.InternalId = Convert.ToInt32(div.SelectSingleNode("a[text()=\"Данные о задолженности\"]").Attributes["href"].Value.Substring(33));
+                        account.City = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[1]").InnerText;
+                        account.Street = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[2]").InnerText;
+                        account.Building = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[1]").InnerText;
+                        account.Apartment = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[2]").InnerText;
+                        retVal.Add(account);
+                    }
+                }
             }
-            _accounts.Create(accounts);
-            return _accounts.ItemsList.ToList();
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message, ex);
+                throw ex;
+            }
+            return retVal;
         }
-        private async Task<List<Common.Bill>> GetBills(HttpClient client, List<Account> accounts)
+        private async Task<List<Common.Bill>> GetBillsList(HttpClient client, IEnumerable<Account> accounts)
         {
             List<Common.Bill> retVal = new List<Common.Bill>();
-            var existed = _bills.ItemsList.Where(x => !x.Enabled).Select(x => x.ErcId).ToList();
-            OnProgressChanged(4, string.Concat(baseUrl, billsUrl));
             var billsJson = await client.GetStringAsync(billsUrl);
             IList<Bill> bills = new List<Bill>();
             using (JsonTextReader reader = new JsonTextReader(new StringReader(billsJson)))
@@ -399,7 +356,7 @@ namespace CommunalPayments.Erc.Repository
             }
 
             CultureInfo culture = new CultureInfo("ru-ru");
-            foreach (var bill in bills.Where(x => !existed.Contains(x.IdBill)))
+            foreach (var bill in bills)
             {
                 var item = new Common.Bill()
                 {
@@ -441,7 +398,7 @@ namespace CommunalPayments.Erc.Repository
             }
             return retVal;
         }
-        private async Task<List<PaymentItem>> GetPaymentItems(HttpClient client, long idOrder)
+        private async Task<List<PaymentItem>> GetPaymentItems(HttpClient client, long idOrder, IEnumerable<Service> services)
         {
             List<PaymentItem> retVal = new List<PaymentItem>();
             var orderJson = await client.GetStringAsync(orderUrl + idOrder.ToString());
@@ -454,7 +411,6 @@ namespace CommunalPayments.Erc.Repository
                     orderItems = serializer.Deserialize<IList<OrderItem>>(reader);
                 }
             }
-            var services = _services.ItemsList.ToList();
             foreach (var orderItem in orderItems)
             {
                 var paymentItem = new PaymentItem()

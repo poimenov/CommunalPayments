@@ -1,5 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace CommunalPayments.Common.Interfaces
@@ -12,10 +12,10 @@ namespace CommunalPayments.Common.Interfaces
     }
     public interface INetRepository
     {
-        Task<bool> Import(int userId);
-        event EventHandler<ProgressChangedEventArgs> ImportProgressChanged;
+        Task<IEnumerable<Account>> GetAccounts(int userId);
+        IAsyncEnumerable<(Common.Bill, int, int)> GetBills(IEnumerable<Account> accounts, IEnumerable<Service> services);
         Task<Debt> GetDebt(Account account, DateTime date);
-        Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date);
+        Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date, IEnumerable<Service> services);
         Task<bool> UpdatePayment(Payment payment);
         Task<bool> DeletePayment(Payment payment);
         string Login { get; set; }

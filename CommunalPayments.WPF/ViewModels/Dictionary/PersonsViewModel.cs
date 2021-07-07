@@ -10,12 +10,12 @@ namespace CommunalPayments.WPF.ViewModels.Dictionary
     public class PersonsViewModel : DictionaryWindowViewModel<Person>
     {
         private readonly IDialogService _dialogService;
-        private readonly INetRepository _netRepository;
+        private readonly IImporter _importer;
         private bool _importInProcess;
-        public PersonsViewModel(IDataAccess<Person> dataAccess, IDialogService dialogService, INetRepository netRepository, ILog logger) : base(dataAccess, logger)
+        public PersonsViewModel(IDataAccess<Person> dataAccess, IDialogService dialogService, IImporter importer, ILog logger) : base(dataAccess, logger)
         {
             _dialogService = dialogService;
-            _netRepository = netRepository;
+            _importer = importer;
             _importInProcess = false;
             _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
             _columns.Add(new KeyValuePair<string, string>("Name", "Name"));
@@ -37,7 +37,7 @@ namespace CommunalPayments.WPF.ViewModels.Dictionary
                     try
                     {
                         this.CanClose = false;
-                        var dialogProgress = new ProgressViewModel(dialogViewModel.Login, dialogViewModel.Password, item.Id, _netRepository);
+                        var dialogProgress = new ProgressViewModel(dialogViewModel.Login, dialogViewModel.Password, item.Id, _importer);
                         success = _dialogService.ShowDialog(this, dialogProgress);
                         if (success == true)
                         {

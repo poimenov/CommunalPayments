@@ -341,7 +341,7 @@ namespace CommunalPayments.WPF.ViewModels
                         success = _dialogService.ShowDialog(this, debtViewModel);
                         if (success == true)
                         {
-                            var newPayment = await _netRepository.CreatePayment(account, debtViewModel.SelectedPayBy, DateTime.Today);
+                            var newPayment = await _netRepository.CreatePayment(account, debtViewModel.SelectedPayBy, DateTime.Today, _services);
                             if (null != newPayment)
                             {
                                 var itemsServIds = ItemsList.Select(x => x.ServiceId).ToList();

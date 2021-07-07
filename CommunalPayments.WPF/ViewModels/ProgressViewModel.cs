@@ -9,7 +9,7 @@ namespace CommunalPayments.WPF.ViewModels
     class ProgressViewModel : ViewModelBase, IModalDialogViewModel
     {
         private bool? dialogResult;
-        private readonly INetRepository _netRepository;
+        private readonly IImporter _importer;
         private int currentProgress;
         private string currentUrl;
         public bool? DialogResult
@@ -17,21 +17,19 @@ namespace CommunalPayments.WPF.ViewModels
             get => dialogResult;
             private set => Set(nameof(DialogResult), ref dialogResult, value);
         }
-        public ProgressViewModel(string login, string password, int userId, INetRepository netRepository)
+        public ProgressViewModel(string login, string password, int userId, IImporter importer)
         {           
             if(!string.IsNullOrWhiteSpace(login) && !string.IsNullOrWhiteSpace(password))
             {
-                _netRepository = netRepository;
-                _netRepository.Login = login;
-                _netRepository.Password = password;
-                _netRepository.ImportProgressChanged += _netRepository_ImportProgressChanged;
-            }
-            _ = this.Start(userId);
+                _importer = importer;
+                _importer.ImportProgressChanged += _netRepository_ImportProgressChanged;
+                _ = this.Start(userId, login, password);
+            }            
         }
 
-        public async Task<bool> Start(int userId)
+        public async Task<bool> Start(int userId, string login, string password)
         {
-            bool retVal = await _netRepository.Import(userId);
+            bool retVal = await _importer.Import(login, password, userId);
             DialogResult = true;
             return retVal;
         }
