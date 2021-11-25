@@ -26,6 +26,7 @@
             <MenuItem Header="{DynamicResource m_menu_Payments}">
                 <MenuItem Header="{DynamicResource m_menu_Payments_NewPayment}" Command="{Binding CreatePaymentCmd}"/>
                 <MenuItem Header="{DynamicResource m_menu_Payments_Payments}" Command="{Binding ShowPaymentsCmd}"/>
+                <MenuItem Header="{DynamicResource m_menu_Payments_Pay}" Command="{Binding ShowUnpaidPaymentsCmd}"/>
                 <Separator />
                 <MenuItem Header="{DynamicResource m_menu_Payments_Exit}" Command="{Binding ExitCmd}" InputGestureText="Alt+F4"/>
             </MenuItem>
@@ -54,6 +55,9 @@
                 <DataTemplate DataType="{x:Type localVMs:PaymentsViewModel}">
                     <local:Payments />
                 </DataTemplate>
+                <DataTemplate DataType="{x:Type localVMs:UnpaidPaymentsViewModel}">
+                    <local:UnpaidPayments />
+                </DataTemplate>                
                 <DataTemplate DataType="{x:Type localVMs:PaymentDetailViewModel}">
                     <local:PaymentDetail />
                 </DataTemplate>

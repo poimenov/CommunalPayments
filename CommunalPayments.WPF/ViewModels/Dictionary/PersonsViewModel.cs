@@ -17,8 +17,8 @@ namespace CommunalPayments.WPF.ViewModels.Dictionary
             _dialogService = dialogService;
             _importer = importer;
             _importInProcess = false;
-            _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
-            _columns.Add(new KeyValuePair<string, string>("Name", "Name"));
+            _columns.Add(new ColDescript("Id", "Id"));
+            _columns.Add(new ColDescript("Name", "Name"));
         }
         public override string ItemTypeName { get => App.ResGlobal.GetString("Person"); }
         #region ImportCmd

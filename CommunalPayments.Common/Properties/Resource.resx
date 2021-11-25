@@ -132,6 +132,9 @@
   <data name="Building" xml:space="preserve">
     <value>Дом</value>
   </data>
+  <data name="Checked" xml:space="preserve">
+    <value>Оплатить</value>
+  </data>
   <data name="City" xml:space="preserve">
     <value>Город</value>
   </data>

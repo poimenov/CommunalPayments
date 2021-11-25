@@ -15,7 +15,7 @@ namespace CommunalPayments.WPF.ViewModels.Dictionary
         protected List<int> _updatedIds;
         protected ObservableCollection<T> _items;
         protected IDataAccess<T> _dataAccess;
-        protected override Type GetGridItemType
+        protected override Type GridItemType
         {
             get
             {

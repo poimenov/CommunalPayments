@@ -13,6 +13,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace CommunalPayments.Erc.Repository
 {
@@ -33,8 +34,10 @@ namespace CommunalPayments.Erc.Repository
         //{2} - ГодМесяц
         //пример:
         //https://erc.megabank.ua/ru/service/publicutilities/paysdebt/2/2/202104
-        private const string createUrl = "/ru/service/publicutilities/paysdebt/{0}/{1}/{2}";
-        private const string deleteUrl = "/ru/cabinet/resp/orderdelete";
+        private const string createPaymentUrl = "/ru/service/publicutilities/paysdebt/{0}/{1}/{2}";
+        private const string deletePaymentUrl = "/ru/cabinet/resp/orderdelete";
+        private const string checkOutUrl = "/ru/checkout/resp/list";
+        private const string bankTransfer = "/ru/checkout/banktransfer";
         public string Login { set; get; }
         public string Password { set; get; }
         public NetRepository(ILog logger)
@@ -109,7 +112,7 @@ namespace CommunalPayments.Erc.Repository
                     {
                         return null;
                     }
-                    using (HttpResponseMessage response = await client.GetAsync(string.Format(createUrl, account.InternalId, (int)payBy, date.AddMonths(-1).ToString("yyyyMM"))))
+                    using (HttpResponseMessage response = await client.GetAsync(string.Format(createPaymentUrl, account.InternalId, (int)payBy, date.AddMonths(-1).ToString("yyyyMM"))))
                     {
                         if (response.StatusCode == HttpStatusCode.OK)
                         {
@@ -226,7 +229,7 @@ namespace CommunalPayments.Erc.Repository
                         postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(ids)));
                         using (var content = new FormUrlEncodedContent(postData))
                         {
-                            using (var response = await client.PostAsync(deleteUrl, content))
+                            using (var response = await client.PostAsync(deletePaymentUrl, content))
                             {
                                 if (response.StatusCode == HttpStatusCode.OK)
                                 {
@@ -241,6 +244,68 @@ namespace CommunalPayments.Erc.Repository
                     _logger.Error(ex.Message, ex);
                     throw ex;
                 }
+            }
+            return retVal;
+        }
+        public async Task<Common.Bill> CreateInvoice(PaymentMode mode, IEnumerable<long> paymentErcIds)
+        {
+            Common.Bill retVal = null;
+            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
+            {
+                return null;
+            }
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    if (!await Login2Site(client))
+                    {
+                        return null;
+                    }
+
+                    JsonSerializer serializer = new JsonSerializer();
+                    StringBuilder sBuilder = new StringBuilder();
+                    using (StringWriter sWriter = new StringWriter(sBuilder))
+                    {
+                        using (JsonTextWriter jtWriter = new JsonTextWriter(sWriter))
+                        {
+                            serializer.Serialize(jtWriter, paymentErcIds.Select(x => x.ToString()));
+                        }
+                    }
+
+                    var postData = new List<KeyValuePair<string, string>>();
+                    postData.Add(new KeyValuePair<string, string>("sorder", sBuilder.ToString()));
+
+                    using (var content = new FormUrlEncodedContent(postData))
+                    {
+                        using (var response = await client.PostAsync(checkOutUrl, content))
+                        {
+                            if (response.StatusCode == HttpStatusCode.OK)
+                            {
+                                var url = response.RequestMessage.RequestUri.ToString();
+                                var u = HttpUtility.ParseQueryString(url).Get("u");
+                                switch (mode)
+                                {
+                                    case PaymentMode.BankTransfer:
+                                        retVal = await CreateInvoiceByBankTransfer(client, u, paymentErcIds);
+                                        break;
+                                    case PaymentMode.BankCard:
+                                        throw new NotImplementedException();
+                                        break;
+                                    default:
+                                        throw new NotImplementedException();
+                                        break;
+                                }
+
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message, ex);
+                throw ex;
             }
             return retVal;
         }
@@ -448,6 +513,44 @@ namespace CommunalPayments.Erc.Repository
             var time = (DateTime.Now.ToUniversalTime() - new DateTime(1970, 1, 1));
             return Convert.ToString(Math.Round(time.TotalMilliseconds));
         }
+        private async Task<Common.Bill> CreateInvoiceByBankTransfer(HttpClient client, string u, IEnumerable<long> paymentErcIds)
+        {
+            var retVal = new Common.Bill();
+            retVal.Enabled = true;
+            retVal.ModeId = (int)PaymentMode.BankTransfer;
+            retVal.StatusId = (int)PaymentStatus.Created;
+            var postData = new List<KeyValuePair<string, string>>();
+            postData.Add(new KeyValuePair<string, string>("orderlist", string.Join(',', paymentErcIds.ToArray())));
+            postData.Add(new KeyValuePair<string, string>("u", u));
+            postData.Add(new KeyValuePair<string, string>("p", "0"));
+            using (var content = new FormUrlEncodedContent(postData))
+            {
+                using (var response = await client.PostAsync(checkOutUrl, content))
+                {
+                    if (response.StatusCode == HttpStatusCode.OK)
+                    {
+                        var page = await response.Content.ReadAsStringAsync();
+                        var doc = new HtmlDocument();
+                        doc.LoadHtml(page);
+                        var purposeOfPayment = doc.DocumentNode.SelectSingleNode("//div[@class=\"banktransferinfo_line\"]/span/textarea").InnerText;
+                        retVal.ErcId = Convert.ToInt64(purposeOfPayment.Split(';')[1]);
+                        retVal.CreateDate = DateTime.Now;
+                        var spans = doc.DocumentNode.SelectNodes("//div[@class=\"pay_conf_order_header\"]/span[@style=\"color:rgb(240, 80, 51);\"]");
+                        int i = 0;
+                        foreach(var span in spans)
+                        {
+                            var payment = new Common.Payment();
+                            payment.ErcId = paymentErcIds.ElementAt(i);
+                            payment.Commission = Convert.ToDecimal(span.InnerText.Replace(" грн.", string.Empty));
+                            retVal.Payments.Add(payment);
+                        }
+
+                    }
+                }
+            }
+            return retVal;
+        }
+
         #endregion
 
     }

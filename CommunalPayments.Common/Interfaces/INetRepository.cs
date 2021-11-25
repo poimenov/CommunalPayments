@@ -10,6 +10,16 @@ namespace CommunalPayments.Common.Interfaces
         Debt,
         Saldo
     }
+    public enum PaymentMode
+    {
+        BankTransfer = 1,
+        BankCard = 15
+    }
+    public enum PaymentStatus
+    {
+        Created = 1,
+        Finished = 5
+    }
     public interface INetRepository
     {
         Task<IEnumerable<Account>> GetAccounts(int userId);
@@ -18,6 +28,7 @@ namespace CommunalPayments.Common.Interfaces
         Task<Payment> CreatePayment(Account account, PayBy payBy, DateTime date, IEnumerable<Service> services);
         Task<bool> UpdatePayment(Payment payment);
         Task<bool> DeletePayment(Payment payment);
+        Task<Bill> CreateInvoice(PaymentMode mode, IEnumerable<long> paymentErcIds);
         string Login { get; set; }
         string Password { get; set; }
     }

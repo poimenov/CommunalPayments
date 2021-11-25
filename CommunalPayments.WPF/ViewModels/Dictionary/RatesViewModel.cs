@@ -14,13 +14,12 @@ namespace CommunalPayments.WPF.ViewModels.Dictionary
     {
         public RatesViewModel(IDataAccess<Rate> dataAccess, ILog logger) : base(dataAccess, logger)
         {
-            _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
-            _columns.Add(new KeyValuePair<string, string>("ServiceId", "Service.Name"));
-            _columns.Add(new KeyValuePair<string, string>("DateFrom", "DateFrom"));
-            _columns.Add(new KeyValuePair<string, string>("VolumeFrom", "VolumeFrom"));
-            _columns.Add(new KeyValuePair<string, string>("Value", "Value"));
-            _columns.Add(new KeyValuePair<string, string>("Measure", "Measure"));
-            _columns.Add(new KeyValuePair<string, string>("Description", "Description"));
+            _columns.Add(new ColDescript("Id", "Id"));
+            _columns.Add(new ColDescript("ServiceId", "Service.Name"));
+            _columns.Add(new ColDescript("DateFrom", "DateFrom"));
+            _columns.Add(new ColDescript("Value", "Value"));
+            _columns.Add(new ColDescript("Measure", "Measure"));
+            _columns.Add(new ColDescript("Description", "Description"));
         }
         public override string ItemTypeName
         {

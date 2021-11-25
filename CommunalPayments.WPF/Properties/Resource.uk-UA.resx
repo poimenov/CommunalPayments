@@ -153,6 +153,9 @@
   <data name="InfoTitle" xml:space="preserve">
     <value>Інформація</value>
   </data>
+  <data name="Pay" xml:space="preserve">
+    <value>Сплатити</value>
+  </data>
   <data name="Payment" xml:space="preserve">
     <value>Квитанція</value>
   </data>

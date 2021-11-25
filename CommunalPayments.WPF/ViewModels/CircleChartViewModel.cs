@@ -51,7 +51,7 @@ namespace CommunalPayments.WPF.ViewModels
             Account item = obj as Account;
             if (item != null)
             {
-                var payments = new ObservableCollection<Payment>(_payments.GetPayments(null, item.Id));
+                var payments = new ObservableCollection<Payment>(_payments.GetPaymentsByAccountId(item.Id));
                 var items = payments.SelectMany(p => p.PaymentItems).ToList();
                 var serviceNames = items.Select(pi => pi.Service.Name).Distinct();
                 var serCollection = new SeriesCollection();

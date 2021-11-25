@@ -66,8 +66,9 @@ namespace CommunalPayments.WPF.ViewModels
         public ICommand ShowServicesCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.Services, App.ResGlobal.GetString("Services")), AlwaysTrue); } }
         public ICommand ShowRatesCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.Rates, App.ResGlobal.GetString("Rates")), AlwaysTrue); } }
         public ICommand ShowPersonsCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.Persons, App.ResGlobal.GetString("Persons")), AlwaysTrue); } }
-        public ICommand ShowAccountsCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.Accounts, App.ResGlobal.GetString("Accounts")), ()=>Persons.Count()>0); } }
+        public ICommand ShowAccountsCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.Accounts, App.ResGlobal.GetString("Accounts")), () => Persons.Count() > 0); } }
         public ICommand ShowPaymentsCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.Payments, App.ResGlobal.GetString("Payments")), AlwaysTrue); } }
+        public ICommand ShowUnpaidPaymentsCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.UnpaidPayments, App.ResGlobal.GetString("Pay")), AlwaysTrue); } }
         public ICommand CreatePaymentCmd { get { return new RelayCommand(() => DockManagerViewModel.AddDocument(App.Locator.PaymentDetail, App.ResGlobal.GetString("PaymentDetail")), AlwaysTrue); } }
         private bool AlwaysTrue() { return true; }
         private void OnExitApp()

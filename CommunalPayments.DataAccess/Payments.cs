@@ -75,26 +75,35 @@ namespace CommunalPayments.DataAccess
             }
         }
 
-        public IEnumerable<Payment> GetPayments(int? year, int? accountId)
+        public IEnumerable<Payment> GetPaymentsByAccountId(int accountId)
         {
             using (var db = new DataModel())
             {
-                var query = db.Payments.Select(x => x);
-                if (accountId.HasValue)
-                {
-                    query = query.Where(x => x.AccountId == accountId.Value);
-                }
-                if (year.HasValue)
-                {
-                    query = query.Where(x => x.PaymentDate.Year == year.Value);
-                }
+                var query = db.Payments.Where(x => x.AccountId == accountId).Select(x => x);
                 if (query.Count() > 0)
                 {
                     return query.Include(x => x.Account.Person).Include(x => x.PaymentItems).ThenInclude(x => x.Service).OrderByDescending(x => x.PaymentDate).ToList();
                 }
                 else
                 {
-                    return query.ToList();
+                    return Enumerable.Empty<Payment>();
+                }
+            }
+        }
+
+        public IEnumerable<Payment> GetUnpaidPaymentsByPersonId(int personId)
+        {
+            using (var db = new DataModel())
+            {
+                var accontIds = db.Accounts.Where(x => x.PersonId == personId).Select(x => x.Id).ToList();
+                var query = db.Payments.Where(x => !x.BillId.HasValue && x.ErcId > 0 && x.Enabled && accontIds.Contains(x.AccountId));
+                if (query.Count() > 0)
+                {
+                    return query.Include(x => x.Account.Person).Include(x => x.PaymentItems).ThenInclude(x => x.Service).OrderByDescending(x => x.PaymentDate).ToList();
+                }
+                else
+                {
+                    return Enumerable.Empty<Payment>();
                 }
             }
         }

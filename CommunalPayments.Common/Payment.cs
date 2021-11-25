@@ -63,4 +63,36 @@ namespace CommunalPayments.Common
         [Browsable(false)]
         public string Bbl { get; set; }
     }
+
+    public class CheckedPayment : Payment
+    {
+        public CheckedPayment(Payment payment)
+        {
+            this.Account = payment.Account;
+            this.AccountId = payment.AccountId;
+            this.Bbl = payment.Bbl;
+            this.Bill = payment.Bill;
+            this.BillId = payment.BillId;
+            this.Comment = payment.Comment;
+            this.Commission = payment.Commission;
+            this.Enabled = payment.Enabled;
+            this.ErcId = payment.ErcId;
+            this.Id = payment.Id;
+            this.PaymentDate = payment.PaymentDate;
+            this.PaymentItems = payment.PaymentItems;
+        }
+        [Display(Name = "Checked", Order = 1, ResourceType = typeof(Properties.Resource))]
+        [Browsable(false)]
+        public bool Checked { get; set; }
+
+        [Display(Name = "Address", Order = 3, ResourceType = typeof(Properties.Resource))]
+        [Browsable(false)]
+        public string Address 
+        { 
+            get
+            {
+                return this.Account.Address;
+            }
+        }
+    }
 }

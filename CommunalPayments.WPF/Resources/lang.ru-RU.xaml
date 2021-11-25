@@ -15,6 +15,7 @@
     <v:String x:Key="m_menu_Payments">Квитанции</v:String>
     <v:String x:Key="m_menu_Payments_NewPayment">Новая квитанция</v:String>
     <v:String x:Key="m_menu_Payments_Payments">Квитанции</v:String>
+    <v:String x:Key="m_menu_Payments_Pay">Оплатить</v:String>
     <v:String x:Key="m_menu_Payments_Exit">Выход</v:String>
     <v:String x:Key="m_menu_Dictionary">Словари</v:String>
     <v:String x:Key="m_menu_Dictionary_Accounts">Квартиры</v:String>
@@ -55,4 +56,7 @@
     <v:String x:Key="ch_Title">График</v:String>
     <v:String x:Key="ch_Yaxis_Title">Оплата</v:String>
     <v:String x:Key="ch_Xaxis_Title">Дата</v:String>
+    <!-- UnpaidPayments window -->
+    <v:String x:Key="up_Person">Выбрать владельца:</v:String>
+    <v:String x:Key="up_Pay">Оплатить выбранные</v:String>
 </ResourceDictionary>

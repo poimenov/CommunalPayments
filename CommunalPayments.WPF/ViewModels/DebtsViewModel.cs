@@ -20,52 +20,24 @@ namespace CommunalPayments.WPF.ViewModels
     {
         private bool? _dialogResult;
         private ILog _logger;
-        private ResourceManager _resourceManager;
-        private List<KeyValuePair<string, string>> _columns;
+        private List<ColDescript> _columns;
 
         public DebtsViewModel(Debt debt, ILog logger)
         {
             this.Debt = debt;
             this._logger = logger;
-            _columns = new List<KeyValuePair<string, string>>
+            _columns = new List<ColDescript>
             {
-                new KeyValuePair<string, string>("ServiceName", "ServiceName"),
-                new KeyValuePair<string, string>("Credited", "Credited"),
-                new KeyValuePair<string, string>("Recalc", "Recalc"),
-                new KeyValuePair<string, string>("Pays", "Pays"),
-                new KeyValuePair<string, string>("Penalty", "Penalty"),
-                new KeyValuePair<string, string>("Subs", "Subs"),
-                new KeyValuePair<string, string>("Saldo", "Saldo"),
-                new KeyValuePair<string, string>("Paysnew", "Paysnew"),
-                new KeyValuePair<string, string>("FirmName", "FirmName")
+                new ColDescript("ServiceName", "ServiceName"),
+                new ColDescript("Credited", "Credited"),
+                new ColDescript("Recalc", "Recalc"),
+                new ColDescript("Pays", "Pays"),
+                new ColDescript("Penalty", "Penalty"),
+                new ColDescript("Subs", "Subs"),
+                new ColDescript("Saldo", "Saldo"),
+                new ColDescript("Paysnew", "Paysnew"),
+                new ColDescript("FirmName", "FirmName")
             };
-        }
-        private string GetDisplayName(string propertyName)
-        {
-            try
-            {
-                var GetGridItemType = typeof(DebtItem);
-                var property = GetGridItemType.GetProperty(propertyName);
-                var displayAttributes = property.GetCustomAttributes(typeof(DisplayAttribute), true);
-                if (displayAttributes.Any())
-                {
-                    var displayAttribute = displayAttributes.First() as DisplayAttribute;
-                    if (null == _resourceManager)
-                    {
-                        _resourceManager = new ResourceManager(displayAttribute.ResourceType.FullName, GetGridItemType.Assembly);
-                    }
-                    return _resourceManager.GetString(displayAttribute.Name);
-                }
-                else
-                {
-                    return propertyName;
-                }
-            }
-            catch (System.Exception ex)
-            {
-                _logger.Error(string.Format("Exception in DebtsViewModel.GetDisplayName(propertyName=\"{0}\")", propertyName), ex);
-                return propertyName;
-            }
         }
         #region Debt
         private Debt _debt;
@@ -83,7 +55,7 @@ namespace CommunalPayments.WPF.ViewModels
                     RaisePropertyChanged(() => Debt);
                 }
             }
-        } 
+        }
         #endregion
         public PayBy SelectedPayBy { get; private set; }
         public bool? DialogResult
@@ -97,7 +69,7 @@ namespace CommunalPayments.WPF.ViewModels
         {
             SelectedPayBy = PayBy.Credit;
             DialogResult = true;
-        } 
+        }
         #endregion
         #region PayBySaldo
         public ICommand PayBySaldo { get { return new RelayCommand(OnPayBySaldo, () => (this.Debt.DebtItems.Count() > 0)); } }
@@ -105,7 +77,7 @@ namespace CommunalPayments.WPF.ViewModels
         {
             SelectedPayBy = PayBy.Saldo;
             DialogResult = true;
-        } 
+        }
         #endregion
 
         #region AutoGeneratingColumnCmd
@@ -113,17 +85,18 @@ namespace CommunalPayments.WPF.ViewModels
         private void OnAutoGeneratingColumn(object obj)
         {
             var e = obj as DataGridAutoGeneratingColumnEventArgs;
-            if(null == e)
+            if (null == e)
             {
                 return;
             }
-            if (_columns.Any(x => x.Key == e.PropertyName))
+            if (_columns.Any(x => x.PropertyName == e.PropertyName))
             {
-                var kvp = _columns.First(x => x.Key == e.PropertyName);
+                var colDesc = _columns.First(x => x.PropertyName == e.PropertyName);
                 var col = new DataGridTextColumn
                 {
-                    Binding = new Binding(kvp.Value),
-                    Header = GetDisplayName(e.PropertyName)
+                    Binding = new Binding(colDesc.BindingPath),
+                    Header = colDesc.GetDisplayName(typeof(DebtItem)),
+                    DisplayIndex = _columns.IndexOf(colDesc)
                 };
                 e.Column = col;
             }

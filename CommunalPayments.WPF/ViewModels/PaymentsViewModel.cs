@@ -18,13 +18,7 @@ namespace CommunalPayments.WPF.ViewModels
         private readonly IPayment _dataAccess;
         private readonly IDialogService _dialogService;
         private readonly INetRepository _netRepository;
-        protected override Type GetGridItemType
-        {
-            get
-            {
-                return typeof(Payment);
-            }
-        }
+        protected override Type GridItemType => typeof(Payment);
         public override string ItemTypeName { get => App.ResGlobal.GetString("Payment"); }
         #region Selected Account
         private Account _selectedAccount;
@@ -69,11 +63,11 @@ namespace CommunalPayments.WPF.ViewModels
             _dataAccess = dataAccess;
             _dialogService = dialogService;
             _netRepository = netRepository;
-            _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
-            _columns.Add(new KeyValuePair<string, string>("ErcId", "ErcId"));
-            _columns.Add(new KeyValuePair<string, string>("Name", "Name"));
-            _columns.Add(new KeyValuePair<string, string>("Sum", "Sum"));
-            _columns.Add(new KeyValuePair<string, string>("Comment", "Comment"));
+            _columns.Add(new ColDescript("Id", "Id"));
+            _columns.Add(new ColDescript("ErcId", "ErcId"));
+            _columns.Add(new ColDescript("Name", "Name"));
+            _columns.Add(new ColDescript("Sum", "Sum"));
+            _columns.Add(new ColDescript("Comment", "Comment"));
             Accounts = new ObservableCollection<Account>(accounts.ItemsList);
         }
         #region EditCmd
@@ -138,7 +132,7 @@ namespace CommunalPayments.WPF.ViewModels
                     if (isOk)
                     {
                         _dataAccess.Delete(_deletedIds);
-                        Payments = new ObservableCollection<Payment>(_dataAccess.GetPayments(null, SelectedAccount.Id));
+                        Payments = new ObservableCollection<Payment>(_dataAccess.GetPaymentsByAccountId(SelectedAccount.Id));
                         RaisePropertyChanged(() => Payments);
                     }
                 }
@@ -152,7 +146,7 @@ namespace CommunalPayments.WPF.ViewModels
             Account item = obj as Account;
             if (item != null)
             {
-                Payments = new ObservableCollection<Payment>(_dataAccess.GetPayments(null, item.Id));
+                Payments = new ObservableCollection<Payment>(_dataAccess.GetPaymentsByAccountId(item.Id));
                 RaisePropertyChanged(() => Payments);
             }
         }

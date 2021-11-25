@@ -36,6 +36,7 @@ namespace CommunalPayments.DataAccess
                             {
                                 if (!db.PayModes.Any(x => x.Id == item.ModeId))
                                 {
+                                    //TODO
                                     //надо бы перечислить все способы в миграции
                                     //но этот код оставить на случай появления новых
                                     db.PayModes.Add(new PayMode { Id = item.ModeId, Name = item.Mode.Name });
@@ -43,6 +44,7 @@ namespace CommunalPayments.DataAccess
                                 }
                                 if (!db.PayStatuses.Any(x => x.Id == item.StatusId))
                                 {
+                                    //TODO
                                     //надо бы перечислить все способы в миграции
                                     //но этот код оставить на случай появления новых
                                     db.PayStatuses.Add(new PayStatus { Id = item.StatusId, Name = item.Status.Name });
@@ -62,41 +64,52 @@ namespace CommunalPayments.DataAccess
                                 {
                                     foreach (var pay in item.Payments)
                                     {
-                                        if (pay.ErcId > 0 && !db.Payments.Any(x => x.ErcId == pay.ErcId))
+                                        if (pay.ErcId > 0)
                                         {
-                                            var payment = new Payment()
+                                            if (db.Payments.Any(x => x.ErcId == pay.ErcId))
                                             {
-                                                ErcId = pay.ErcId,
-                                                AccountId = pay.AccountId,
-                                                BillId = bill.Id,
-                                                Enabled = false,
-                                                Bbl = pay.Bbl,
-                                                Comment = pay.Comment,
-                                                Commission = pay.Commission,
-                                                PaymentDate = pay.PaymentDate
-                                            };
-                                            db.Payments.Add(payment);
-                                            db.SaveChanges();
-                                            if (null != pay.PaymentItems)
-                                            {
-                                                foreach (var payItem in pay.PaymentItems)
-                                                {
-                                                    var paymentItem = new PaymentItem()
-                                                    {
-                                                        Amount = payItem.Amount,
-                                                        CurrentIndication = payItem.CurrentIndication,
-                                                        LastIndication = payItem.LastIndication,
-                                                        Value = payItem.Value,
-                                                        ServiceId = payItem.ServiceId,
-                                                        Enabled = false,
-                                                        PeriodFrom = payItem.PeriodFrom,
-                                                        PeriodTo = payItem.PeriodTo,
-                                                        PaymentId = payment.Id,
-                                                        Options = payItem.Options
-                                                    };
-                                                    db.PaymentItems.Add(paymentItem);
-                                                }
+                                                var payment = db.Payments.First(x => x.ErcId == pay.ErcId);
+                                                payment.BillId = bill.Id;
+                                                payment.Enabled = false;
+                                                payment.Commission = pay.Commission;
                                                 db.SaveChanges();
+                                            }
+                                            else
+                                            {
+                                                var payment = new Payment()
+                                                {
+                                                    ErcId = pay.ErcId,
+                                                    AccountId = pay.AccountId,
+                                                    BillId = bill.Id,
+                                                    Enabled = false,
+                                                    Bbl = pay.Bbl,
+                                                    Comment = pay.Comment,
+                                                    Commission = pay.Commission,
+                                                    PaymentDate = pay.PaymentDate
+                                                };
+                                                db.Payments.Add(payment);
+                                                db.SaveChanges();
+                                                if (null != pay.PaymentItems)
+                                                {
+                                                    foreach (var payItem in pay.PaymentItems)
+                                                    {
+                                                        var paymentItem = new PaymentItem()
+                                                        {
+                                                            Amount = payItem.Amount,
+                                                            CurrentIndication = payItem.CurrentIndication,
+                                                            LastIndication = payItem.LastIndication,
+                                                            Value = payItem.Value,
+                                                            ServiceId = payItem.ServiceId,
+                                                            Enabled = false,
+                                                            PeriodFrom = payItem.PeriodFrom,
+                                                            PeriodTo = payItem.PeriodTo,
+                                                            PaymentId = payment.Id,
+                                                            Options = payItem.Options
+                                                        };
+                                                        db.PaymentItems.Add(paymentItem);
+                                                    }
+                                                    db.SaveChanges();
+                                                }
                                             }
                                         }
                                     }

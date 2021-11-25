@@ -15,6 +15,7 @@
     <v:String x:Key="m_menu_Payments">Квитанції</v:String>
     <v:String x:Key="m_menu_Payments_NewPayment">Нова квитанція</v:String>
     <v:String x:Key="m_menu_Payments_Payments">Квитанції</v:String>
+    <v:String x:Key="m_menu_Payments_Pay">Сплатити</v:String>
     <v:String x:Key="m_menu_Payments_Exit">Вихід</v:String>
     <v:String x:Key="m_menu_Dictionary">Словники</v:String>
     <v:String x:Key="m_menu_Dictionary_Accounts">Квартири</v:String>
@@ -55,4 +56,7 @@
     <v:String x:Key="ch_Title">Графік</v:String>
     <v:String x:Key="ch_Yaxis_Title">Оплата</v:String>
     <v:String x:Key="ch_Xaxis_Title">Дата</v:String>
+    <!-- UnpaidPayments window -->
+    <v:String x:Key="up_Person">Обрати властника:</v:String>
+    <v:String x:Key="up_Pay">Сплатити вибрані</v:String>    
 </ResourceDictionary>

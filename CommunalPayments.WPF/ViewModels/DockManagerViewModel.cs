@@ -84,6 +84,15 @@ namespace CommunalPayments.WPF.ViewModels
                     {
                         SelectedItem = ((PaymentsViewModel)sender).SelectedItem;
                     }
+                    if (sender is UnpaidPaymentsViewModel)
+                    {
+                        var item = ((UnpaidPaymentsViewModel)sender).SelectedItem;
+                        if (null == item)
+                        {
+                            return;
+                        }
+                        SelectedItem = item;
+                    }
                     RaisePropertyChanged(() => this.SelectedItem);
                     break;
             }

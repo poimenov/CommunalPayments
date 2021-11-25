@@ -19,7 +19,7 @@ namespace CommunalPayments.WPF.ViewModels
         private bool _importInProcess;
         private readonly IDialogService _dialogService;
         private readonly INetRepository _netRepository;
-        protected override Type GetGridItemType
+        protected override Type GridItemType
         {
             get
             {
@@ -32,14 +32,14 @@ namespace CommunalPayments.WPF.ViewModels
             this._dataAccess = dataAccess;
             this._actualRates = rates.ItemsList.Where(x => x.Enabled).ToList();
             this._services = services.ItemsList.Where(x => x.ErcId > 0).ToList();
-            _columns.Add(new KeyValuePair<string, string>("Id", "Id"));
-            _columns.Add(new KeyValuePair<string, string>("ServiceId", "Service.Name"));
-            _columns.Add(new KeyValuePair<string, string>("PeriodFrom", "PeriodFrom"));
-            _columns.Add(new KeyValuePair<string, string>("PeriodTo", "PeriodTo"));
-            _columns.Add(new KeyValuePair<string, string>("LastIndication", "LastIndication"));
-            _columns.Add(new KeyValuePair<string, string>("CurrentIndication", "CurrentIndication"));
-            _columns.Add(new KeyValuePair<string, string>("Value", "Value"));
-            _columns.Add(new KeyValuePair<string, string>("Amount", "Amount"));
+            _columns.Add(new ColDescript("Id", "Id"));
+            _columns.Add(new ColDescript("ServiceId", "Service.Name"));
+            _columns.Add(new ColDescript("PeriodFrom", "PeriodFrom", ColumnType.TextColumn, "MMMM yyyy"));
+            _columns.Add(new ColDescript("PeriodTo", "PeriodTo", ColumnType.TextColumn, "MMMM yyyy"));
+            _columns.Add(new ColDescript("LastIndication", "LastIndication"));
+            _columns.Add(new ColDescript("CurrentIndication", "CurrentIndication"));
+            _columns.Add(new ColDescript("Value", "Value"));
+            _columns.Add(new ColDescript("Amount", "Amount"));
             Accounts = new ObservableCollection<Account>(accounts.ItemsList);
             _importInProcess = false;
             _dialogService = dialogService;

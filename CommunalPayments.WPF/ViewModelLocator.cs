@@ -47,6 +47,7 @@ namespace CommunalPayments.WPF
             SimpleIoc.Default.Register<DataModel>();
             SimpleIoc.Default.Register<MainViewModel>();
             SimpleIoc.Default.Register<PaymentsViewModel>();
+            SimpleIoc.Default.Register<UnpaidPaymentsViewModel>();
             SimpleIoc.Default.Register<PaymentDetailViewModel>();
             SimpleIoc.Default.Register<ServicesViewModel>();
             SimpleIoc.Default.Register<RatesViewModel>();
@@ -75,6 +76,13 @@ namespace CommunalPayments.WPF
             get
             {
                 return SimpleIoc.Default.GetInstance<PaymentsViewModel>(Guid.NewGuid().ToString());
+            }
+        }
+        public UnpaidPaymentsViewModel UnpaidPayments
+        {
+            get
+            {
+                return SimpleIoc.Default.GetInstance<UnpaidPaymentsViewModel>(Guid.NewGuid().ToString());
             }
         }
         public PaymentDetailViewModel PaymentDetail

@@ -106,6 +106,15 @@ namespace CommunalPayments.Common.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Оплатить.
+        /// </summary>
+        public static string Checked {
+            get {
+                return ResourceManager.GetString("Checked", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Город.
         /// </summary>
         public static string City {

@@ -9,7 +9,8 @@ namespace CommunalPayments.Common.Interfaces
     public interface IPayment : IDataAccess<Payment>
     {
         Payment LastPayment(int accountId);
-        IEnumerable<Payment> GetPayments(int? year, int? accountId);
+        IEnumerable<Payment> GetPaymentsByAccountId(int accountId);
+        IEnumerable<Payment> GetUnpaidPaymentsByPersonId(int personId);
         int Create(Payment payment);
     }
 }
