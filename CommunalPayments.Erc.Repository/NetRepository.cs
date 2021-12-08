@@ -38,8 +38,14 @@ namespace CommunalPayments.Erc.Repository
         private const string deletePaymentUrl = "/ru/cabinet/resp/orderdelete";
         private const string checkOutUrl = "/ru/checkout/resp/list";
         private const string bankTransfer = "/ru/checkout/banktransfer";
+        private static readonly HttpClient client;
         public string Login { set; get; }
         public string Password { set; get; }
+        static NetRepository()
+        {
+            client = new HttpClient();
+            client.BaseAddress = new Uri(baseUrl);
+        }
         public NetRepository(ILog logger)
         {
             _logger = logger;
@@ -49,25 +55,21 @@ namespace CommunalPayments.Erc.Repository
         {
             var retVal = new List<Common.Bill>();
 
-            using (HttpClient client = new HttpClient())
+            if (await Login2Site())
             {
-                if (await Login2Site(client))
+                var bills = await GetBillsList(accounts);
+                int i = 0;
+                var count = bills.SelectMany(b => b.Payments, (b, p) => new { b, p }).Count();
+                foreach (var bill in bills.OrderBy(b => b.ErcId))
                 {
-                    var bills = await GetBillsList(client, accounts);
-                    int i = 0;
-                    var count = bills.SelectMany(b => b.Payments, (b, p) => new { b, p }).Count();
-                    foreach (var bill in bills.OrderBy(b => b.ErcId))
+                    foreach (var payment in bill.Payments.OrderBy(b => b.ErcId))
                     {
-                        foreach (var payment in bill.Payments.OrderBy(b => b.ErcId))
-                        {
-                            payment.PaymentItems.AddRange(await GetPaymentItems(client, payment.ErcId, services));
-                            i++;
-                        }
-                        yield return (bill, count, i);
+                        payment.PaymentItems.AddRange(await GetPaymentItems(payment.ErcId, services));
+                        i++;
                     }
+                    yield return (bill, count, i);
                 }
             }
-
         }
         public async Task<Debt> GetDebt(Account account, DateTime date)
         {
@@ -78,14 +80,11 @@ namespace CommunalPayments.Erc.Repository
             }
             try
             {
-                using (HttpClient client = new HttpClient())
+                if (!await Login2Site())
                 {
-                    if (!await Login2Site(client))
-                    {
-                        return null;
-                    }
-                    retVal.DebtItems = await GetDebts(client, account.InternalId, retVal.YearMonths);
+                    return null;
                 }
+                retVal.DebtItems = await GetDebts(account.InternalId, retVal.YearMonths);
             }
             catch (Exception ex)
             {
@@ -106,41 +105,38 @@ namespace CommunalPayments.Erc.Repository
             }
             try
             {
-                using (HttpClient client = new HttpClient())
+                if (!await Login2Site())
                 {
-                    if (!await Login2Site(client))
+                    return null;
+                }
+                using (HttpResponseMessage response = await client.GetAsync(string.Format(createPaymentUrl, account.InternalId, (int)payBy, date.AddMonths(-1).ToString("yyyyMM"))))
+                {
+                    if (response.StatusCode == HttpStatusCode.OK)
                     {
-                        return null;
-                    }
-                    using (HttpResponseMessage response = await client.GetAsync(string.Format(createPaymentUrl, account.InternalId, (int)payBy, date.AddMonths(-1).ToString("yyyyMM"))))
-                    {
-                        if (response.StatusCode == HttpStatusCode.OK)
+                        var url = response.RequestMessage.RequestUri.ToString();
+                        if (!url.Contains("/ru/service/publicutilities/orderedit"))
                         {
-                            var url = response.RequestMessage.RequestUri.ToString();
-                            if (!url.Contains("/ru/service/publicutilities/orderedit"))
+                            return null;
+                        }
+                        retVal.ErcId = Convert.ToInt64(url.Split('/').Last());
+                        var page = await response.Content.ReadAsStringAsync();
+                        var doc = new HtmlDocument();
+                        doc.LoadHtml(page);
+                        var json = doc.DocumentNode.SelectSingleNode("//script[text()[contains(.,'\"bbl\":')]]").InnerText.Replace("jQuery.extend(Drupal.settings, ", "").Replace(");", "");
+                        using (var reader = new JsonTextReader(new StringReader(json)))
+                        {
+                            while (reader.Read())
                             {
-                                return null;
-                            }
-                            retVal.ErcId = Convert.ToInt64(url.Split('/').Last());
-                            var page = await response.Content.ReadAsStringAsync();
-                            var doc = new HtmlDocument();
-                            doc.LoadHtml(page);
-                            var json = doc.DocumentNode.SelectSingleNode("//script[text()[contains(.,'\"bbl\":')]]").InnerText.Replace("jQuery.extend(Drupal.settings, ", "").Replace(");", "");
-                            using (var reader = new JsonTextReader(new StringReader(json)))
-                            {
-                                while (reader.Read())
+                                if (reader.Value != null && Convert.ToString(reader.Value) == "bbl")
                                 {
-                                    if (reader.Value != null && Convert.ToString(reader.Value) == "bbl")
-                                    {
-                                        reader.Read();
-                                        retVal.Bbl = Convert.ToString(reader.Value);
-                                        break;
-                                    }
+                                    reader.Read();
+                                    retVal.Bbl = Convert.ToString(reader.Value);
+                                    break;
                                 }
                             }
-                            retVal.PaymentItems.AddRange(await GetPaymentItems(client, retVal.ErcId, services));
-                            retVal.PaymentItems.ForEach(item => item.Enabled = true);
                         }
+                        retVal.PaymentItems.AddRange(await GetPaymentItems(retVal.ErcId, services));
+                        retVal.PaymentItems.ForEach(item => item.Enabled = true);
                     }
                 }
             }
@@ -158,47 +154,44 @@ namespace CommunalPayments.Erc.Repository
             {
                 try
                 {
-                    using (HttpClient client = new HttpClient())
+                    if (!await Login2Site())
                     {
-                        if (!await Login2Site(client))
+                        return retVal;
+                    }
+                    foreach (var item in payment.PaymentItems.Where(p => string.IsNullOrEmpty(p.Options)))
+                    {
+                        item.Options = GetTime();
+                    }
+                    var orderItems = new List<OrderItem>();
+                    foreach (var item in payment.PaymentItems.OrderBy(p => p.ServiceId))
+                    {
+                        orderItems.Add(new OrderItem()
                         {
-                            return retVal;
-                        }
-                        foreach (var item in payment.PaymentItems.Where(p => string.IsNullOrEmpty(p.Options)))
-                        {
-                            item.Options = GetTime();
-                        }
-                        var orderItems = new List<OrderItem>();
-                        foreach (var item in payment.PaymentItems.OrderBy(p => p.ServiceId))
-                        {
-                            orderItems.Add(new OrderItem()
-                            {
-                                Service = item.Service.ErcId,
-                                Amount = item.Amount,
-                                CurCounter = item.CurrentIndication.HasValue ? item.CurrentIndication.Value : 0m,
-                                PrevCounter = item.LastIndication.HasValue ? item.LastIndication.Value : 0m,
-                                Diff = item.Value.HasValue ? item.Value.Value : 0m,
-                                Month1 = item.PeriodFrom.ToString("yyyyMM"),
-                                Month2 = item.PeriodTo.ToString("yyyyMM"),
-                                Options = item.Options
-                            });
-                        }
+                            Service = item.Service.ErcId,
+                            Amount = item.Amount,
+                            CurCounter = item.CurrentIndication.HasValue ? item.CurrentIndication.Value : 0m,
+                            PrevCounter = item.LastIndication.HasValue ? item.LastIndication.Value : 0m,
+                            Diff = item.Value.HasValue ? item.Value.Value : 0m,
+                            Month1 = item.PeriodFrom.ToString("yyyyMM"),
+                            Month2 = item.PeriodTo.ToString("yyyyMM"),
+                            Options = item.Options
+                        });
+                    }
 
-                        var postData = new List<KeyValuePair<string, string>>();
-                        postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(orderItems).ToLower()));
-                        postData.Add(new KeyValuePair<string, string>("cdf", payment.Account.Number.ToString()));
-                        postData.Add(new KeyValuePair<string, string>("idf", "0"));
-                        postData.Add(new KeyValuePair<string, string>("ido", payment.ErcId.ToString()));
-                        postData.Add(new KeyValuePair<string, string>("bbl", payment.Bbl));
+                    var postData = new List<KeyValuePair<string, string>>();
+                    postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(orderItems).ToLower()));
+                    postData.Add(new KeyValuePair<string, string>("cdf", payment.Account.Number.ToString()));
+                    postData.Add(new KeyValuePair<string, string>("idf", "0"));
+                    postData.Add(new KeyValuePair<string, string>("ido", payment.ErcId.ToString()));
+                    postData.Add(new KeyValuePair<string, string>("bbl", payment.Bbl));
 
-                        using (var content = new FormUrlEncodedContent(postData))
+                    using (var content = new FormUrlEncodedContent(postData))
+                    {
+                        using (var response = await client.PostAsync(paysOrderUrl, content))
                         {
-                            using (var response = await client.PostAsync(paysOrderUrl, content))
+                            if (response.StatusCode == HttpStatusCode.OK)
                             {
-                                if (response.StatusCode == HttpStatusCode.OK)
-                                {
-                                    return true;
-                                }
+                                return true;
                             }
                         }
                     }
@@ -218,23 +211,20 @@ namespace CommunalPayments.Erc.Repository
             {
                 try
                 {
-                    using (HttpClient client = new HttpClient())
+                    if (!await Login2Site())
                     {
-                        if (!await Login2Site(client))
+                        return retVal;
+                    }
+                    var ids = new long[] { payment.ErcId };
+                    var postData = new List<KeyValuePair<string, string>>();
+                    postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(ids)));
+                    using (var content = new FormUrlEncodedContent(postData))
+                    {
+                        using (var response = await client.PostAsync(deletePaymentUrl, content))
                         {
-                            return retVal;
-                        }
-                        var ids = new long[] { payment.ErcId };
-                        var postData = new List<KeyValuePair<string, string>>();
-                        postData.Add(new KeyValuePair<string, string>("sorder", JsonConvert.SerializeObject(ids)));
-                        using (var content = new FormUrlEncodedContent(postData))
-                        {
-                            using (var response = await client.PostAsync(deletePaymentUrl, content))
+                            if (response.StatusCode == HttpStatusCode.OK)
                             {
-                                if (response.StatusCode == HttpStatusCode.OK)
-                                {
-                                    return true;
-                                }
+                                return true;
                             }
                         }
                     }
@@ -256,48 +246,45 @@ namespace CommunalPayments.Erc.Repository
             }
             try
             {
-                using (HttpClient client = new HttpClient())
+                if (!await Login2Site())
                 {
-                    if (!await Login2Site(client))
+                    return null;
+                }
+
+                JsonSerializer serializer = new JsonSerializer();
+                StringBuilder sBuilder = new StringBuilder();
+                using (StringWriter sWriter = new StringWriter(sBuilder))
+                {
+                    using (JsonTextWriter jtWriter = new JsonTextWriter(sWriter))
                     {
-                        return null;
+                        serializer.Serialize(jtWriter, paymentErcIds.Select(x => x.ToString()));
                     }
+                }
 
-                    JsonSerializer serializer = new JsonSerializer();
-                    StringBuilder sBuilder = new StringBuilder();
-                    using (StringWriter sWriter = new StringWriter(sBuilder))
+                var postData = new List<KeyValuePair<string, string>>();
+                postData.Add(new KeyValuePair<string, string>("sorder", sBuilder.ToString()));
+
+                using (var content = new FormUrlEncodedContent(postData))
+                {
+                    using (var response = await client.PostAsync(checkOutUrl, content))
                     {
-                        using (JsonTextWriter jtWriter = new JsonTextWriter(sWriter))
+                        if (response.StatusCode == HttpStatusCode.OK)
                         {
-                            serializer.Serialize(jtWriter, paymentErcIds.Select(x => x.ToString()));
-                        }
-                    }
-
-                    var postData = new List<KeyValuePair<string, string>>();
-                    postData.Add(new KeyValuePair<string, string>("sorder", sBuilder.ToString()));
-
-                    using (var content = new FormUrlEncodedContent(postData))
-                    {
-                        using (var response = await client.PostAsync(checkOutUrl, content))
-                        {
-                            if (response.StatusCode == HttpStatusCode.OK)
+                            var url = response.RequestMessage.RequestUri.ToString();
+                            var u = HttpUtility.ParseQueryString(url).Get("u");
+                            switch (mode)
                             {
-                                var url = response.RequestMessage.RequestUri.ToString();
-                                var u = HttpUtility.ParseQueryString(url).Get("u");
-                                switch (mode)
-                                {
-                                    case PaymentMode.BankTransfer:
-                                        retVal = await CreateInvoiceByBankTransfer(client, u, paymentErcIds);
-                                        break;
-                                    case PaymentMode.BankCard:
-                                        throw new NotImplementedException();
-                                        break;
-                                    default:
-                                        throw new NotImplementedException();
-                                        break;
-                                }
-
+                                case PaymentMode.BankTransfer:
+                                    retVal = await CreateInvoiceByBankTransfer(u, paymentErcIds);
+                                    break;
+                                case PaymentMode.BankCard:
+                                    throw new NotImplementedException();
+                                    break;
+                                default:
+                                    throw new NotImplementedException();
+                                    break;
                             }
+
                         }
                     }
                 }
@@ -332,14 +319,19 @@ namespace CommunalPayments.Erc.Repository
             }
             return retVal;
         }
-        private async Task<bool> Login2Site(HttpClient client)
+        private async Task<bool> Login2Site()
         {
-            bool retVal = false;
-            client.BaseAddress = new Uri(baseUrl);
+            bool retVal = false;            
             var loginPage = await client.GetStringAsync("/ru");
             var doc = new HtmlDocument();
             doc.LoadHtml(loginPage);
-            var formBuildId = doc.DocumentNode.SelectSingleNode("//input[@name=\"form_build_id\"]").Attributes["value"].Value;
+            var formBuildIdInput = doc.DocumentNode.SelectSingleNode("//input[@name=\"form_build_id\"]");
+            if (formBuildIdInput == null)
+            {
+                return true;
+            }
+
+            var formBuildId = formBuildIdInput.Attributes["value"].Value;
 
             var postData = new List<KeyValuePair<string, string>>();
             postData.Add(new KeyValuePair<string, string>("name", this.Login));
@@ -375,28 +367,25 @@ namespace CommunalPayments.Erc.Repository
             List<Account> retVal = new List<Account>();
             try
             {
-                using (HttpClient client = new HttpClient())
+                if (!await Login2Site())
                 {
-                    if (!await Login2Site(client))
-                    {
-                        return retVal;
-                    }
-                    var page = await client.GetStringAsync(accountsUrl);
+                    return retVal;
+                }
+                var page = await client.GetStringAsync(accountsUrl);
 
-                    var doc = new HtmlDocument();
-                    doc.LoadHtml(page);
-                    foreach (var div in doc.DocumentNode.SelectNodes("//div[@class=\"block_lic\"]"))
-                    {
-                        var account = new Account() { PersonId = userId, Enabled = true, Payments = new List<Payment>() };
-                        account.Number = Convert.ToInt64(div.SelectSingleNode("h3[@class=\"title\"]/child::text()[1]").InnerText);
-                        account.Key = div.SelectSingleNode("a[text()=\"Оплатить\"]").Attributes["href"].Value.Substring(29);
-                        account.InternalId = Convert.ToInt32(div.SelectSingleNode("a[text()=\"Данные о задолженности\"]").Attributes["href"].Value.Substring(33));
-                        account.City = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[1]").InnerText;
-                        account.Street = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[2]").InnerText;
-                        account.Building = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[1]").InnerText;
-                        account.Apartment = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[2]").InnerText;
-                        retVal.Add(account);
-                    }
+                var doc = new HtmlDocument();
+                doc.LoadHtml(page);
+                foreach (var div in doc.DocumentNode.SelectNodes("//div[@class=\"block_lic\"]"))
+                {
+                    var account = new Account() { PersonId = userId, Enabled = true, Payments = new List<Payment>() };
+                    account.Number = Convert.ToInt64(div.SelectSingleNode("h3[@class=\"title\"]/child::text()[1]").InnerText);
+                    account.Key = div.SelectSingleNode("a[text()=\"Оплатить\"]").Attributes["href"].Value.Substring(29);
+                    account.InternalId = Convert.ToInt32(div.SelectSingleNode("a[text()=\"Данные о задолженности\"]").Attributes["href"].Value.Substring(33));
+                    account.City = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[1]").InnerText;
+                    account.Street = div.SelectSingleNode("p[@class=\"addr_lic\"]/child::text()[2]").InnerText;
+                    account.Building = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[1]").InnerText;
+                    account.Apartment = div.SelectSingleNode("p[@class=\"addr_lic\"]/em[2]").InnerText;
+                    retVal.Add(account);
                 }
             }
             catch (Exception ex)
@@ -406,7 +395,7 @@ namespace CommunalPayments.Erc.Repository
             }
             return retVal;
         }
-        private async Task<List<Common.Bill>> GetBillsList(HttpClient client, IEnumerable<Account> accounts)
+        private async Task<List<Common.Bill>> GetBillsList(IEnumerable<Account> accounts)
         {
             List<Common.Bill> retVal = new List<Common.Bill>();
             var billsJson = await client.GetStringAsync(billsUrl);
@@ -463,7 +452,7 @@ namespace CommunalPayments.Erc.Repository
             }
             return retVal;
         }
-        private async Task<List<PaymentItem>> GetPaymentItems(HttpClient client, long idOrder, IEnumerable<Service> services)
+        private async Task<List<PaymentItem>> GetPaymentItems(long idOrder, IEnumerable<Service> services)
         {
             List<PaymentItem> retVal = new List<PaymentItem>();
             var orderJson = await client.GetStringAsync(orderUrl + idOrder.ToString());
@@ -493,7 +482,7 @@ namespace CommunalPayments.Erc.Repository
             }
             return retVal;
         }
-        private async Task<IList<DebtItem>> GetDebts(HttpClient client, int internalId, string yearM)
+        private async Task<IList<DebtItem>> GetDebts(int internalId, string yearM)
         {
             IList<DebtItem> retVal = new List<DebtItem>();
             var debtJson = await client.GetStringAsync(string.Format(debtUrl, internalId, yearM));
@@ -513,7 +502,7 @@ namespace CommunalPayments.Erc.Repository
             var time = (DateTime.Now.ToUniversalTime() - new DateTime(1970, 1, 1));
             return Convert.ToString(Math.Round(time.TotalMilliseconds));
         }
-        private async Task<Common.Bill> CreateInvoiceByBankTransfer(HttpClient client, string u, IEnumerable<long> paymentErcIds)
+        private async Task<Common.Bill> CreateInvoiceByBankTransfer(string u, IEnumerable<long> paymentErcIds)
         {
             var retVal = new Common.Bill();
             retVal.Enabled = true;
