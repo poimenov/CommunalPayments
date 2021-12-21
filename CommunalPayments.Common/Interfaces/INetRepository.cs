@@ -31,5 +31,6 @@ namespace CommunalPayments.Common.Interfaces
         Task<Bill> CreateInvoice(PaymentMode mode, IEnumerable<long> paymentErcIds);
         string Login { get; set; }
         string Password { get; set; }
+        string GetReportPath(PaymentMode mode, long ercId);
     }
 }

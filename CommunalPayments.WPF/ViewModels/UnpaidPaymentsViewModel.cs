@@ -9,12 +9,14 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using System.Diagnostics;
 
 namespace CommunalPayments.WPF.ViewModels
 {
     public class UnpaidPaymentsViewModel : DockWindowViewModel
     {
-        private readonly IPayment _dataAccess;
+        private readonly IPayment _paymentDataAccess;
+        private readonly IDataAccess<Bill> _billDataAccess;
         private readonly IDialogService _dialogService;
         private readonly INetRepository _netRepository;
         protected override Type GridItemType
@@ -72,9 +74,11 @@ namespace CommunalPayments.WPF.ViewModels
         }
         public ObservableCollection<CheckedPayment> Payments { get; private set; }
         public ObservableCollection<Person> Persons { get; private set; }
-        public UnpaidPaymentsViewModel(IDialogService dialogService, IPayment dataAccess, IDataAccess<Person> persons, INetRepository netRepository, ILog logger) : base(logger)
+        public UnpaidPaymentsViewModel(IDialogService dialogService, IPayment paymentDataAccess, IDataAccess<Person> persons, 
+            IDataAccess<Bill> billDataAccess, INetRepository netRepository, ILog logger) : base(logger)
         {
-            _dataAccess = dataAccess;
+            _paymentDataAccess = paymentDataAccess;
+            _billDataAccess = billDataAccess;
             _dialogService = dialogService;
             _netRepository = netRepository;
             _columns.Add(new ColDescript("Checked", "Checked", ColumnType.CheckBoxColumn));
@@ -93,7 +97,7 @@ namespace CommunalPayments.WPF.ViewModels
             Person item = obj as Person;
             if (item != null)
             {
-                Payments = new ObservableCollection<CheckedPayment>(_dataAccess.GetUnpaidPaymentsByPersonId(item.Id).OrderBy(p => p.AccountId).Select(p => new CheckedPayment(p)));
+                Payments = new ObservableCollection<CheckedPayment>(_paymentDataAccess.GetUnpaidPaymentsByPersonId(item.Id).OrderBy(p => p.AccountId).Select(p => new CheckedPayment(p)));
                 RaisePropertyChanged(() => Payments);
             }
         }
@@ -101,8 +105,41 @@ namespace CommunalPayments.WPF.ViewModels
         public ICommand PayCmd { get { return new RelayCommand(OnPay, () => (null != Payments && Payments.Where(x => x.Checked).Count() > 0)); } }
         private async void OnPay()
         { 
-            //
-            //
+            if(this.Sum > 0)
+            {
+                if (string.IsNullOrEmpty(_netRepository.Login) || string.IsNullOrEmpty(_netRepository.Login))
+                {
+                    var loginViewModel = new LoginViewModel();
+                    var success = _dialogService.ShowDialog(this, loginViewModel);
+                    if (success == true)
+                    {
+                        _netRepository.Login = loginViewModel.Login;
+                        _netRepository.Password = loginViewModel.Password;
+                    }
+                }
+                this.Cursor = Cursors.Wait;
+                var bill = await _netRepository.CreateInvoice(PaymentMode.BankTransfer, Payments.Where(x => x.Checked).Select(x => x.ErcId));
+                if (null != bill)
+                {
+                    _billDataAccess.Create(new List<Bill>() { bill });
+                    _dialogService.ShowMessageBox(this, App.ResGlobal.GetString("BillCreated"), App.ResGlobal.GetString("InfoTitle"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    OnSelectPerson(SelectedPerson);
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = "cmd",
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        Arguments = $"/c {_netRepository.GetReportPath(PaymentMode.BankTransfer, bill.ErcId)}"
+                    };
+                    Process.Start(psi);
+                }
+                else
+                {
+                    _dialogService.ShowMessageBox(this, App.ResGlobal.GetString("BillNotCreated"), App.ResGlobal.GetString("InfoTitle"), System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
+                this.Cursor = Cursors.Arrow;
+            }
         }
     }
 }

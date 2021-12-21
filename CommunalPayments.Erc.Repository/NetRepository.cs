@@ -1,5 +1,6 @@
 ﻿using CommunalPayments.Common;
 using CommunalPayments.Common.Interfaces;
+using CommunalPayments.Common.Reports;
 using HtmlAgilityPack;
 using log4net;
 using Newtonsoft.Json;
@@ -74,15 +75,11 @@ namespace CommunalPayments.Erc.Repository
         public async Task<Debt> GetDebt(Account account, DateTime date)
         {
             var retVal = new Debt(account, date);
-            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
-            {
-                return retVal;
-            }
             try
             {
                 if (!await Login2Site())
                 {
-                    return null;
+                    return retVal;
                 }
                 retVal.DebtItems = await GetDebts(account.InternalId, retVal.YearMonths);
             }
@@ -99,10 +96,6 @@ namespace CommunalPayments.Erc.Repository
             retVal.Account = account;
             retVal.AccountId = account.Id;
             retVal.Enabled = true;
-            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
-            {
-                return null;
-            }
             try
             {
                 if (!await Login2Site())
@@ -240,10 +233,6 @@ namespace CommunalPayments.Erc.Repository
         public async Task<Common.Bill> CreateInvoice(PaymentMode mode, IEnumerable<long> paymentErcIds)
         {
             Common.Bill retVal = null;
-            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
-            {
-                return null;
-            }
             try
             {
                 if (!await Login2Site())
@@ -262,32 +251,57 @@ namespace CommunalPayments.Erc.Repository
                 }
 
                 var postData = new List<KeyValuePair<string, string>>();
-                postData.Add(new KeyValuePair<string, string>("sorder", sBuilder.ToString()));
-
+                postData.Add(new KeyValuePair<string, string>("sorder", sBuilder.ToString()));                
+                string url = null;
                 using (var content = new FormUrlEncodedContent(postData))
                 {
                     using (var response = await client.PostAsync(checkOutUrl, content))
                     {
                         if (response.StatusCode == HttpStatusCode.OK)
                         {
-                            var url = response.RequestMessage.RequestUri.ToString();
-                            var u = HttpUtility.ParseQueryString(url).Get("u");
-                            switch (mode)
-                            {
-                                case PaymentMode.BankTransfer:
-                                    retVal = await CreateInvoiceByBankTransfer(u, paymentErcIds);
-                                    break;
-                                case PaymentMode.BankCard:
-                                    throw new NotImplementedException();
-                                    break;
-                                default:
-                                    throw new NotImplementedException();
-                                    break;
-                            }
 
+                            var contentString = await response.Content.ReadAsStringAsync();
+                            using (var reader = new JsonTextReader(new StringReader(contentString)))
+                            {
+                                while (reader.Read())
+                                {
+                                    if (reader.Value != null && Convert.ToString(reader.Value) == "url")
+                                    {
+                                        reader.Read();
+                                        url = Convert.ToString(reader.Value);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+
+                string u = null;
+                if (null != url)
+                {
+                    using (var response = await client.GetAsync(url))
+                    {
+                        if (response.StatusCode == HttpStatusCode.OK)
+                        {
+                            u = HttpUtility.ParseQueryString(url).Get("u");
+                        }
+                    }
+                }
+
+                if (null != u)
+                {
+                    switch (mode)
+                    {
+                        case PaymentMode.BankTransfer:
+                            retVal = await CreateInvoiceByBankTransfer(u, paymentErcIds);
+                            break;
+                        case PaymentMode.BankCard:
+                            throw new NotImplementedException();
+                        default:
+                            throw new NotImplementedException();
+                    }
+                }
+
             }
             catch (Exception ex)
             {
@@ -295,6 +309,10 @@ namespace CommunalPayments.Erc.Repository
                 throw ex;
             }
             return retVal;
+        }
+        public string GetReportPath(PaymentMode mode, long ercId)
+        {
+            return Path.Combine(PaymentReport.AppDataPath, "Reports", $"{mode}_{ercId}.htm");
         }
         #region Private methods
         private DateTime PeriodFrom(string s)
@@ -321,7 +339,12 @@ namespace CommunalPayments.Erc.Repository
         }
         private async Task<bool> Login2Site()
         {
-            bool retVal = false;            
+            bool retVal = false;
+            if (string.IsNullOrWhiteSpace(this.Login) || string.IsNullOrWhiteSpace(this.Password))
+            {
+                return retVal;
+            }
+
             var loginPage = await client.GetStringAsync("/ru");
             var doc = new HtmlDocument();
             doc.LoadHtml(loginPage);
@@ -332,7 +355,6 @@ namespace CommunalPayments.Erc.Repository
             }
 
             var formBuildId = formBuildIdInput.Attributes["value"].Value;
-
             var postData = new List<KeyValuePair<string, string>>();
             postData.Add(new KeyValuePair<string, string>("name", this.Login));
             postData.Add(new KeyValuePair<string, string>("pass", this.Password));
@@ -509,12 +531,12 @@ namespace CommunalPayments.Erc.Repository
             retVal.ModeId = (int)PaymentMode.BankTransfer;
             retVal.StatusId = (int)PaymentStatus.Created;
             var postData = new List<KeyValuePair<string, string>>();
-            postData.Add(new KeyValuePair<string, string>("orderlist", string.Join(',', paymentErcIds.ToArray())));
+            postData.Add(new KeyValuePair<string, string>("orderlist", string.Join(',', paymentErcIds.ToArray()) + ","));
             postData.Add(new KeyValuePair<string, string>("u", u));
             postData.Add(new KeyValuePair<string, string>("p", "0"));
             using (var content = new FormUrlEncodedContent(postData))
             {
-                using (var response = await client.PostAsync(checkOutUrl, content))
+                using (var response = await client.PostAsync(bankTransfer, content))
                 {
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
@@ -526,14 +548,26 @@ namespace CommunalPayments.Erc.Repository
                         retVal.CreateDate = DateTime.Now;
                         var spans = doc.DocumentNode.SelectNodes("//div[@class=\"pay_conf_order_header\"]/span[@style=\"color:rgb(240, 80, 51);\"]");
                         int i = 0;
-                        foreach(var span in spans)
+                        foreach (var span in spans)
                         {
                             var payment = new Common.Payment();
                             payment.ErcId = paymentErcIds.ElementAt(i);
-                            payment.Commission = Convert.ToDecimal(span.InnerText.Replace(" грн.", string.Empty));
+                            payment.Commission = 0m;
+                            decimal commission;
+                            var style = NumberStyles.AllowDecimalPoint;
+                            var culture = CultureInfo.CreateSpecificCulture("en-US");
+                            if (decimal.TryParse(span.InnerText.Replace(" грн.", string.Empty), style, culture, out commission))
+                            {
+                                payment.Commission = commission;
+                            }
                             retVal.Payments.Add(payment);
+                            i++;
                         }
-
+                        //сохранить страницу на диске и открыть в браузере.
+                        using (var writer = File.CreateText(GetReportPath(PaymentMode.BankTransfer, retVal.ErcId)))
+                        {
+                            writer.Write(page);
+                        }
                     }
                 }
             }

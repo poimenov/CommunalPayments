@@ -126,6 +126,12 @@
   <data name="Accounts" xml:space="preserve">
     <value>Квартири</value>
   </data>
+  <data name="BillCreated" xml:space="preserve">
+    <value>Рахунок успішно створено.</value>
+  </data>
+  <data name="BillNotCreated" xml:space="preserve">
+    <value>Рахунок не був створений. Спробуйте повторити операцію через деякий час.</value>
+  </data>
   <data name="DeletePaymentCaption" xml:space="preserve">
     <value>Підтвердження видалення</value>
   </data>
