@@ -82,7 +82,11 @@ namespace CommunalPayments.DataAccess
                 var query = db.Payments.Where(x => x.AccountId == accountId).Select(x => x);
                 if (query.Count() > 0)
                 {
-                    return query.Include(x => x.Account.Person).Include(x => x.PaymentItems).ThenInclude(x => x.Service).OrderByDescending(x => x.PaymentDate).ToList();
+                    return query.Include(x => x.Account.Person)
+                                .Include(x => x.PaymentItems)
+                                .ThenInclude(x => x.Service)
+                                .OrderByDescending(x => x.PaymentDate)
+                                .ToList();
                 }
                 else
                 {
@@ -99,7 +103,11 @@ namespace CommunalPayments.DataAccess
                 var query = db.Payments.Where(x => !x.BillId.HasValue && x.ErcId > 0 && x.Enabled && accontIds.Contains(x.AccountId));
                 if (query.Count() > 0)
                 {
-                    return query.Include(x => x.Account.Person).Include(x => x.PaymentItems).ThenInclude(x => x.Service).OrderByDescending(x => x.PaymentDate).ToList();
+                    return query.Include(x => x.Account.Person)
+                                .Include(x => x.PaymentItems)
+                                .ThenInclude(x => x.Service)
+                                .OrderByDescending(x => x.PaymentDate)
+                                .ToList();
                 }
                 else
                 {
@@ -112,14 +120,36 @@ namespace CommunalPayments.DataAccess
         {
             using (var db = new DataModel())
             {
-                if (db.Payments.Any(x => x.AccountId == accountId))
-                {
-                    return db.Payments.Where(x => x.AccountId == accountId).Include(x => x.PaymentItems).ThenInclude(x => x.Service).OrderByDescending(x => x.PaymentDate).FirstOrDefault();
-                }
-                else
+                if (!db.Payments.Any(x => x.AccountId == accountId))
                 {
                     return null;
                 }
+                var retVal = db.Payments.Where(x => x.AccountId == accountId)
+                                        .Include(x => x.PaymentItems)
+                                        .ThenInclude(x => x.Service)
+                                        .OrderByDescending(x => x.PaymentDate)
+                                        .FirstOrDefault();
+                foreach(var service in db.Services)
+                {
+                    var paymentItems = db.PaymentItems.Where(p => p.CurrentIndication.HasValue && 
+                                                                  p.ServiceId == service.Id && 
+                                                                  p.Payment.AccountId == accountId)
+                                                      .OrderByDescending(p=>p.Payment.PaymentDate);
+                    if(paymentItems.Count() > 0)
+                    {
+                        if(retVal.PaymentItems.Any(p=>p.ServiceId == service.Id))
+                        {
+                            //обновить на случай, если показания счётчика в прошлый платёж не передавались
+                            retVal.PaymentItems.First(p => p.ServiceId == service.Id).CurrentIndication = paymentItems.First().CurrentIndication;
+                        }
+                        else
+                        {
+                            //добавить строку если по ней в прошлый раз не платили
+                            retVal.PaymentItems.Add(paymentItems.First());
+                        }
+                    }
+                }
+                return retVal;
             }
         }
 
